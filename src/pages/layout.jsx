@@ -91,6 +91,20 @@ export default function Layout({ children }) {
 
 
 
+  const { data: settingsData } = useQuery({
+    queryKey: ['businessSettings'],
+    queryFn: () => base44.entities.Settings.list(),
+  });
+
+  useEffect(() => {
+    if (settingsData && settingsData[0]) {
+      setBusinessSettings({
+        business_name: settingsData[0].business_name || "",
+        business_logo: settingsData[0].business_logo || ""
+      });
+    }
+  }, [settingsData]);
+
   React.useEffect(() => {
     base44.auth.me().then(user => {
       setUser(user);
@@ -110,16 +124,6 @@ export default function Layout({ children }) {
     }).catch(() => {
       setUser(null);
     });
-
-    // טעינת הגדרות העסק
-    base44.entities.Settings.list().then(results => {
-      if (results && results[0]) {
-        setBusinessSettings({
-          business_name: results[0].business_name || "",
-          business_logo: results[0].business_logo || ""
-        });
-      }
-    }).catch(() => { });
   }, []);
 
   const handleLogout = () => {

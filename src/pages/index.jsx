@@ -115,8 +115,9 @@ export default function Pages() {
     React.useEffect(() => {
         const checkUser = async () => {
             try {
-                const { data: { user: supabaseUser } } = await base44.supabase.auth.getUser();
-                if (supabaseUser) {
+                // One call to get the session and user data
+                const { data: { session } } = await base44.supabase.auth.getSession();
+                if (session?.user) {
                     const userData = await base44.auth.me();
                     setUser(userData);
                 }
