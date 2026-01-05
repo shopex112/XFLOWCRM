@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://supabasekong-aw0cg88kccwgg8c4skskccoc.46.202.154.237.sslip.io'
+const supabaseUrl = 'http://supabasekong-aw0cg88kccwgg8c4skskccoc.46.202.154.237.sslip.io'
 const supabaseAnonKey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc2NzY0NjE0MCwiZXhwIjo0OTIzMzE5NzQwLCJyb2xlIjoiYW5vbiJ9.WhtAxKc_QjHXmUt9OS_Tv3-3zy2xSXzBWsDwNaDvhog'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -50,23 +50,32 @@ export const base44 = {
 
   entities: new Proxy({}, {
     get: (target, entityName) => {
-      // Map Base44 entity names to Supabase table names (lowercase)
+      if (typeof entityName === 'symbol') return target[entityName]
+
       const tableName = entityName.toLowerCase()
 
       return {
-        list: async (query = {}) => {
-          let request = supabase.from(tableName).select('*')
-          // Add basic filtering if needed
-          const { data, error } = await request
-          if (error) {
-            console.error(`Error fetching ${tableName}:`, error)
-            return []
+        list: async (queryOrSort = {}) => {
+          try {
+            let request = supabase.from(tableName).select('*')
+
+            if (typeof queryOrSort === 'string') {
+              const isDesc = queryOrSort.startsWith('-')
+              const column = isDesc ? queryOrSort.substring(1) : queryOrSort
+              request = request.order(column, { ascending: !isDesc })
+            }
+
+            const { data, error } = await request
+            if (error) throw error
+            return data || []
+          } catch (e) {
+            console.error(`Error in list ${tableName}:`, e)
+            return [] // Return empty array to prevent UI crash
           }
-          return data
         },
         get: async (id) => {
-          const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single()
-          if (error) throw error
+          const { data, error } = await supabase.from(tableName).select('*').eq('id', id).maybeSingle()
+          if (error) return null
           return data
         },
         create: async (data) => {
