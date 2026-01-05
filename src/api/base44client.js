@@ -39,6 +39,15 @@ export const base44 = {
     }
   },
 
+  functions: new Proxy({}, {
+    get: (target, name) => {
+      return async () => {
+        console.warn(`Function base44.functions.${name} is not implemented in Supabase yet.`);
+        return { success: true, message: 'Stubbed' };
+      }
+    }
+  }),
+
   entities: new Proxy({}, {
     get: (target, entityName) => {
       // Map Base44 entity names to Supabase table names (lowercase)
@@ -77,7 +86,7 @@ export const base44 = {
         }
       }
     }
-  }},
+  }),
 
   agents: {
     conversations: {},
@@ -85,24 +94,24 @@ export const base44 = {
 
     createConversation: async ({ agent_name, metadata }) => {
       const id = Math.random().toString(36).substring(7);
-const conversation = {
-  id,
-  agent_name,
-  metadata,
-  messages: [],
-  created_at: new Date().toISOString()
-};
-base44.agents.conversations[id] = conversation;
-return conversation;
+      const conversation = {
+        id,
+        agent_name,
+        metadata,
+        messages: [],
+        created_at: new Date().toISOString()
+      };
+      base44.agents.conversations[id] = conversation;
+      return conversation;
     },
 
-getConversation: async (id) => {
-  return base44.agents.conversations[id] || null;
-},
+    getConversation: async (id) => {
+      return base44.agents.conversations[id] || null;
+    },
 
-  listConversations: async ({ agent_name }) => {
-    return Object.values(base44.agents.conversations).filter(c => c.agent_name === agent_name);
-  },
+    listConversations: async ({ agent_name }) => {
+      return Object.values(base44.agents.conversations).filter(c => c.agent_name === agent_name);
+    },
 
     addMessage: async (conversation, { role, content }) => {
       const id = typeof conversation === 'string' ? conversation : conversation.id;
@@ -193,12 +202,12 @@ getConversation: async (id) => {
       return newMessage;
     },
 
-      subscribeToConversation: (id, callback) => {
-        base44.agents.listeners[id] = callback;
-        // Return unsubscription function
-        return () => {
-          delete base44.agents.listeners[id];
-        };
-      }
+    subscribeToConversation: (id, callback) => {
+      base44.agents.listeners[id] = callback;
+      // Return unsubscription function
+      return () => {
+        delete base44.agents.listeners[id];
+      };
+    }
   }
 }
