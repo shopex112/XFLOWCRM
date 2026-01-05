@@ -1,3 +1,4 @@
+import Login from "./login.jsx";
 import Layout from "./layout.jsx";
 
 import Tasks from "./tasks.jsx";
@@ -105,6 +106,55 @@ function PagesContent() {
 }
 
 export default function Pages() {
+    const [user, setUser] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+    const [authReady, setAuthReady] = React.useState(false);
+
+    React.useEffect(() => {
+        const checkUser = async () => {
+            try {
+                const { data: { user: supabaseUser } } = await base44.supabase.auth.getUser();
+                if (supabaseUser) {
+                    const userData = await base44.auth.me();
+                    setUser(userData);
+                }
+            } catch (err) {
+                console.error("Auth check failed:", err);
+            } finally {
+                setLoading(false);
+                setAuthReady(true);
+            }
+        };
+        checkUser();
+
+        const { data: authListener } = base44.supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                const userData = await base44.auth.me();
+                setUser(userData);
+            } else if (event === 'SIGNED_OUT') {
+                setUser(null);
+            }
+        });
+
+        return () => {
+            if (authListener && authListener.subscription) {
+                authListener.subscription.unsubscribe();
+            }
+        };
+    }, []);
+
+    if (loading || !authReady) {
+        return (
+            <div className="flex justify-center items-center h-screen bg-slate-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return <Login />;
+    }
+
     return (
         <Router>
             <PagesContent />

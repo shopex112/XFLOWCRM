@@ -10,6 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
  * This object mimics the Base44 SDK structure to minimize UI changes.
  */
 export const base44 = {
+  supabase,
   auth: {
     me: async () => {
       const { data: { user }, error } = await supabase.auth.getUser()
