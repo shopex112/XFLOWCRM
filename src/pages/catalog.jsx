@@ -14,7 +14,7 @@ export default function Catalog() {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   const [formData, setFormData] = useState({
     sku: "",
     name: "",
@@ -156,18 +156,18 @@ export default function Catalog() {
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>קוד פריט (SKU)</Label>
-                        <Input 
-                          value={formData.sku} 
-                          onChange={(e) => setFormData({...formData, sku: e.target.value})} 
+                        <Input
+                          value={formData.sku}
+                          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                           placeholder="SRV-001"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>שם הפריט *</Label>
-                        <Input 
-                          value={formData.name} 
-                          onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                          required 
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
                           placeholder="שם השירות/מוצר"
                         />
                       </div>
@@ -176,19 +176,19 @@ export default function Catalog() {
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>קטגוריה</Label>
-                        <Input 
-                          value={formData.category} 
-                          onChange={(e) => setFormData({...formData, category: e.target.value})} 
+                        <Input
+                          value={formData.category}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                           placeholder="שירות / מוצר / אחר"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>מחיר *</Label>
-                        <Input 
-                          type="number" 
-                          value={formData.sell_price} 
-                          onChange={(e) => setFormData({...formData, sell_price: parseFloat(e.target.value) || 0})} 
-                          required 
+                        <Input
+                          type="number"
+                          value={formData.sell_price}
+                          onChange={(e) => setFormData({ ...formData, sell_price: parseFloat(e.target.value) || 0 })}
+                          required
                           placeholder="0"
                         />
                       </div>
@@ -196,17 +196,17 @@ export default function Catalog() {
 
                     <div className="space-y-2">
                       <Label>תיאור</Label>
-                      <Input 
-                        value={formData.description} 
-                        onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                      <Input
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         placeholder="תיאור קצר של הפריט..."
                       />
                     </div>
 
                     <div className="flex justify-end gap-3">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
+                      <Button
+                        type="button"
+                        variant="outline"
                         onClick={() => {
                           setShowForm(false);
                           setEditingItem(null);
@@ -251,7 +251,7 @@ export default function Catalog() {
                       )}
                     </div>
                   </CardHeader>
-                  
+
                   <CardContent className="space-y-3">
                     {item.description && (
                       <p className="text-sm text-slate-600">{item.description}</p>
