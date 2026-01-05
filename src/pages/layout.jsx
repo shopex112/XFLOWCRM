@@ -18,6 +18,7 @@ import {
   ClipboardList,
   Truck,
   Building2,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -94,14 +95,14 @@ export default function Layout({ children }) {
     base44.auth.me().then(user => {
       setUser(user);
       queryClient.setQueryData(['currentUser'], user);
-      
+
       // בדיקת מנוי - רק אם לא כבר בדף החידוש
       if (user.subscription_end_date && location.pathname !== createPageUrl('RenewSubscription')) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const endDate = new Date(user.subscription_end_date);
         endDate.setHours(0, 0, 0, 0);
-        
+
         if (endDate < today) {
           window.location.href = createPageUrl('RenewSubscription');
         }
@@ -109,7 +110,7 @@ export default function Layout({ children }) {
     }).catch(() => {
       setUser(null);
     });
-    
+
     // טעינת הגדרות העסק
     base44.entities.Settings.list().then(results => {
       if (results && results[0]) {
@@ -118,7 +119,7 @@ export default function Layout({ children }) {
           business_logo: results[0].business_logo || ""
         });
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const handleLogout = () => {
@@ -136,70 +137,70 @@ export default function Layout({ children }) {
   // בניית תפריט דינמי לפי הרשאות
   const getNavigationItems = () => {
     if (!user) return [];
-    
+
     const items = [];
-    
+
     // לידים
     if (hasPermission(user, 'leads_view_all') || user.role === "admin") {
       items.push({ title: "לידים", url: createPageUrl("Leads"), icon: TrendingUp });
     }
-    
+
     // הצעות מחיר
     if (hasPermission(user, 'quotes_view') || user.role === "admin") {
       items.push({ title: "הצעות מחיר", url: createPageUrl("Quotes"), icon: FileText });
     }
-    
+
     // חשבוניות
     if (hasPermission(user, 'invoices_view') || user.role === "admin") {
       items.push({ title: "חשבוניות", url: createPageUrl("Invoices"), icon: FileText });
     }
-    
+
     // לקוחות
     if (hasPermission(user, 'customers_view_all') || user.role === "admin") {
       items.push({ title: "לקוחות", url: createPageUrl("Customers"), icon: Users });
     }
-    
+
     // עבודות
     if (hasPermission(user, 'jobs_view_all') || hasPermission(user, 'jobs_change_status') || user.role === "admin") {
       items.push({ title: "עבודות", url: createPageUrl("Jobs"), icon: CheckSquare });
     }
-    
+
     // המשימות שלי - כולם יכולים לראות את המשימות שלהם
     items.push({ title: "המשימות שלי", url: createPageUrl("Tasks"), icon: ClipboardList });
-    
+
     // עובדים - כולם יכולים לראות את עצמם
     items.push({ title: "עובדים", url: createPageUrl("Employees"), icon: Users });
-    
+
     // קטלוג (לשעבר מלאי)
     if (hasPermission(user, 'inventory_view') || user.role === "admin") {
       items.push({ title: "קטלוג", url: createPageUrl("Catalog"), icon: Car });
     }
-    
+
     // הזמנות מספקים
     if (hasPermission(user, 'suppliers_view') || user.role === "admin") {
       items.push({ title: "הזמנות מספקים", url: createPageUrl("SupplierOrders"), icon: Truck });
     }
-    
+
     // ספקים
     if (hasPermission(user, 'suppliers_view') || user.role === "admin") {
       items.push({ title: "ספקים", url: createPageUrl("Suppliers"), icon: Users });
     }
-    
+
     // דוחות
     if (hasPermission(user, 'reports_view') || user.role === "admin") {
       items.push({ title: "דוחות", url: createPageUrl("Reports"), icon: BarChart3 });
     }
-    
+
     // בוט
     if (hasPermission(user, 'bot_access') || user.role === "admin") {
-      items.push({ title: "🤖 בוט", url: createPageUrl("Bot"), icon: MessageCircle, highlight: true });
+      items.push({ title: "🤖 סוכן חכם", url: createPageUrl("ChatBot"), icon: Sparkles, highlight: true });
     }
-    
+
     // הגדרות מנהל
     if (hasPermission(user, 'settings_access') || user.role === "admin") {
       items.push({ title: "הגדרות מנהל", url: createPageUrl("Settings"), icon: Settings });
     }
-    
+
     return items;
   };
 
@@ -210,24 +211,24 @@ export default function Layout({ children }) {
       <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50" dir="rtl" onClick={(e) => { if (!e.target.closest('[data-sidebar]') && !e.target.closest('button[data-sidebar-trigger]')) { e.stopPropagation(); } }}>
         <Sidebar side="right" className="border-r border-slate-200 bg-white shadow-2xl z-50" collapsible="none">
           <SidebarHeader className="border-b border-slate-100 p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {businessSettings.business_logo ? (
-                <img src={businessSettings.business_logo} alt="לוגו" className="w-10 h-10 object-contain rounded-xl shadow-md" />
-              ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-md">
-                  <Building2 className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {businessSettings.business_logo ? (
+                  <img src={businessSettings.business_logo} alt="לוגו" className="w-10 h-10 object-contain rounded-xl shadow-md" />
+                ) : (
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-md">
+                    <Building2 className="w-6 h-6 text-white" />
+                  </div>
+                )}
+                <div>
+                  <h2 className="font-bold text-slate-900 text-lg">{businessSettings.business_name || "CRM"}</h2>
+                  <p className="text-xs text-slate-500">מערכת ניהול</p>
                 </div>
-              )}
-              <div>
-                <h2 className="font-bold text-slate-900 text-lg">{businessSettings.business_name || "CRM"}</h2>
-                <p className="text-xs text-slate-500">מערכת ניהול</p>
               </div>
+              <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors">
+                <X className="w-5 h-5 text-slate-600" />
+              </SidebarTrigger>
             </div>
-            <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-slate-600" />
-            </SidebarTrigger>
-          </div>
           </SidebarHeader>
 
           <SidebarContent className="p-3">
@@ -239,12 +240,12 @@ export default function Layout({ children }) {
                 <SidebarMenu>
                   {navigationItems
                     .sort((a, b) => {
-                        const aIsAdminItem = a.icon === Shield || a.icon === Settings;
-                        const bIsAdminItem = b.icon === Shield || b.icon === Settings;
+                      const aIsAdminItem = a.icon === Shield || a.icon === Settings;
+                      const bIsAdminItem = b.icon === Shield || b.icon === Settings;
 
-                        if (aIsAdminItem && !bIsAdminItem) return 1;
-                        if (!aIsAdminItem && bIsAdminItem) return -1;
-                        return 0;
+                      if (aIsAdminItem && !bIsAdminItem) return 1;
+                      if (!aIsAdminItem && bIsAdminItem) return -1;
+                      return 0;
                     })
                     .map((item) => {
                       const isActive = location.pathname === item.url;
@@ -256,15 +257,14 @@ export default function Layout({ children }) {
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton
                             asChild
-                            className={`transition-all duration-200 rounded-xl mb-1 ${
-                              isAdminItem
-                                ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg hover:shadow-xl'
-                                : item.highlight
+                            className={`transition-all duration-200 rounded-xl mb-1 ${isAdminItem
+                              ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg hover:shadow-xl'
+                              : item.highlight
                                 ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl'
                                 : isActive
-                                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg'
-                                : 'hover:bg-slate-50 text-slate-700'
-                            }`}
+                                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg'
+                                  : 'hover:bg-slate-50 text-slate-700'
+                              }`}
                           >
                             <Link to={item.url} className="flex items-center gap-3 px-4 py-3 relative">
                               <ItemIcon className={`w-5 h-5 ${isAdminItem || item.highlight || isActive ? 'text-white' : 'text-slate-500'}`} />
@@ -286,47 +286,47 @@ export default function Layout({ children }) {
 
           <SidebarFooter className="border-t border-slate-100 p-4">
             <div className="space-y-3">
-               <div className="p-3 bg-slate-50 rounded-xl space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm">
-                      <span className="text-white font-bold text-sm">
-                        {user?.full_name?.[0] || 'U'}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900 text-sm truncate">
-                        {user?.full_name || 'משתמש'}
-                      </p>
-                      <p className="text-xs text-slate-500 truncate">{user?.email || ''}</p>
-                    </div>
+              <div className="p-3 bg-slate-50 rounded-xl space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-sm">
+                    <span className="text-white font-bold text-sm">
+                      {user?.full_name?.[0] || 'U'}
+                    </span>
                   </div>
-                  {user && (
-                     <div className="space-y-2">
-                       <div className="flex items-center justify-between p-2 bg-white rounded-lg border">
-                         <span className="text-sm font-medium">
-                           {user.availability_status === "פנוי" && "🟢 פנוי"}
-                           {user.availability_status === "בעבודה" && "🟡 בעבודה"}
-                           {user.availability_status === "בחופש" && "🔴 בחופש"}
-                         </span>
-                         {user.availability_status !== "בעבודה" && (
-                           <Button 
-                             size="sm" 
-                             variant="outline"
-                             onClick={handleStatusToggle}
-                             className="h-7 text-xs"
-                           >
-                             {user.availability_status === "בחופש" ? "חזרתי" : "בחופש"}
-                           </Button>
-                         )}
-                       </div>
-                       {user.availability_status === "בעבודה" && (
-                         <p className="text-xs text-slate-500 text-center">
-                           הסטטוס ישתנה אוטומטי בסיום העבודה
-                         </p>
-                       )}
-                     </div>
-                  )}
-               </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 text-sm truncate">
+                      {user?.full_name || 'משתמש'}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate">{user?.email || ''}</p>
+                  </div>
+                </div>
+                {user && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-white rounded-lg border">
+                      <span className="text-sm font-medium">
+                        {user.availability_status === "פנוי" && "🟢 פנוי"}
+                        {user.availability_status === "בעבודה" && "🟡 בעבודה"}
+                        {user.availability_status === "בחופש" && "🔴 בחופש"}
+                      </span>
+                      {user.availability_status !== "בעבודה" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleStatusToggle}
+                          className="h-7 text-xs"
+                        >
+                          {user.availability_status === "בחופש" ? "חזרתי" : "בחופש"}
+                        </Button>
+                      )}
+                    </div>
+                    {user.availability_status === "בעבודה" && (
+                      <p className="text-xs text-slate-500 text-center">
+                        הסטטוס ישתנה אוטומטי בסיום העבודה
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
               <Button
                 variant="outline"
                 className="w-full justify-start gap-2 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
@@ -372,7 +372,7 @@ export default function Layout({ children }) {
           {/* Footer */}
           <footer className="bg-white border-t border-slate-200 px-4 py-3">
             <div className="flex flex-col md:flex-row items-center justify-between gap-2 text-sm">
-              <a 
+              <a
                 href={`https://wa.me/972553123658?text=${encodeURIComponent(`הגעתי מהמערכת של ${businessSettings.business_name || 'העסק'} ואני רוצה לשמוע פרטים`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -380,9 +380,9 @@ export default function Layout({ children }) {
               >
                 💬 רוצה מערכת כזו? השאר פרטים בוואטסאפ
               </a>
-              <a 
-                href="https://xflow.co.il/" 
-                target="_blank" 
+              <a
+                href="https://xflow.co.il/"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-slate-500 hover:text-blue-600 transition-colors"
               >
@@ -390,7 +390,7 @@ export default function Layout({ children }) {
               </a>
             </div>
           </footer>
-          </main>
+        </main>
       </div>
       <Toaster />
     </SidebarProvider>
