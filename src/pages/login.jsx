@@ -30,8 +30,10 @@ export default function Login() {
                 description: "ברוך הבא למערכת xFlow CRM",
             });
 
-            // Redirect will be handled by the layout's auth check or simple reload
-            window.location.reload();
+            // Small delay to ensure storage persistence before reload
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 500);
         } catch (error) {
             console.error('Login error:', error);
             toast({

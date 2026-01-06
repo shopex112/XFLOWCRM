@@ -114,18 +114,51 @@ export default function Pages() {
 
     React.useEffect(() => {
         const checkUser = async () => {
-            // Very aggressive timeout for initial auth check
+            let foundUser = false;
+
+            // Priority 1: Instant check via localStorage (bypasses SDK hangs)
+            const storageKey = 'xflow-v3-auth';
+            const cachedSession = localStorage.getItem(storageKey);
+
+            if (cachedSession) {
+                try {
+                    const parsed = JSON.parse(cachedSession);
+                    if (parsed?.user) {
+                        console.log("Proactive session found.");
+                        const userMeta = parsed.user.user_metadata || {};
+                        setUser({
+                            id: parsed.user.id,
+                            email: parsed.user.email,
+                            full_name: userMeta.full_name || parsed.user.email.split('@')[0],
+                            role: userMeta.role || 'admin',
+                            ...userMeta
+                        });
+                        foundUser = true;
+                        setLoading(false);
+                        setAuthReady(true);
+                    }
+                } catch (e) {
+                    console.warn("Failed to parse cached session");
+                }
+            }
+
+            // Priority 2: Standard SDK check (with timeout)
             const timeoutId = setTimeout(() => {
-                console.warn("Auth check stalled, showing login.");
-                setLoading(false);
-                setAuthReady(true);
-            }, 2500);
+                if (!foundUser) {
+                    console.warn("Auth check stalled, showing login.");
+                    setLoading(false);
+                    setAuthReady(true);
+                }
+            }, 3000);
 
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
                 if (session?.user) {
                     const userData = await base44.auth.me();
                     setUser(userData);
+                    foundUser = true;
+                } else if (!foundUser) {
+                    setUser(null);
                 }
             } catch (err) {
                 console.error("Auth check failed:", err);
