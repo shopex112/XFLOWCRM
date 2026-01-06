@@ -3,14 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = 'https://fnxaeyqddkrmvmigaiul.supabase.co'
 const supabaseAnonKey = 'sb_publishable_LwmD75OxWNrKXrec6IPYxA_Egx6R8He'
 
-// Critical: Singleton with forced storage key
+// Use a unique storage key to avoid conflicts with previous local installs
+const STORAGE_KEY = 'xflow-v3-auth';
+
 if (!window.__supabase) {
   window.__supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'xflow-auth-storage-v2'
+      storageKey: STORAGE_KEY
     }
   });
 }
@@ -32,55 +34,63 @@ export const base44 = {
           ...user.user_metadata
         }
 
-        // Secondary check via session
+        // Try fallback via session if getUser hangs or fails
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) return { id: session.user.id, email: session.user.email, ...session.user.user_metadata };
+        if (session?.user) return {
+          id: session.user.id,
+          email: session.user.email,
+          ...session.user.user_metadata
+        };
 
         throw new Error('Not authenticated');
       } catch (e) {
-        console.error("Auth me error:", e);
+        console.error("Auth check failed:", e);
         throw e;
       }
     },
     signInWithPassword: async ({ email, password }) => {
-      console.log("Attempting direct fetch login...");
-      const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: { 'apikey': supabaseAnonKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      console.log(`[Auth] Attempting login for: ${email}`);
 
-      const json = await res.json();
-      if (!res.ok) {
-        let msg = json.error_description || json.error || 'שגיאת התחברות';
-        if (msg === 'Invalid login credentials') msg = 'אימייל או סיסמה שגויים';
-        throw new Error(msg);
-      }
-
-      console.log("Login success, syncing session...");
-
-      // We perform setSession but we don't let it block indefinitely
       try {
-        const sessionPromise = supabase.auth.setSession({
-          access_token: json.access_token,
-          refresh_token: json.refresh_token
-        });
+        // Use the standard SDK first, it's more reliable for session persistence
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-        // Timeout session sync after 2 seconds
-        await Promise.race([
-          sessionPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
-        ]).catch(e => console.warn("Session sync timed out or failed, but login is valid."));
+        if (error) {
+          console.warn("[Auth] SDK login failed, trying direct fetch bypass...", error.message);
 
+          // Bypass: Direct fetch if SDK is problematic
+          const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: { 'apikey': supabaseAnonKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          const json = await res.json();
+          if (!res.ok) {
+            let msg = json.error_description || json.error || 'שגיאת התחברות';
+            if (msg.includes('invalid_credentials')) msg = 'אימייל או סיסמה שגויים';
+            if (msg.includes('Email not confirmed')) msg = 'יש לאשר את האימייל בתיבת הדואר';
+            throw new Error(msg);
+          }
+
+          // Force sync the session manually
+          await supabase.auth.setSession({
+            access_token: json.access_token,
+            refresh_token: json.refresh_token
+          });
+
+          return { data: json, error: null };
+        }
+
+        return { data, error: null };
       } catch (e) {
-        console.warn("Silent session sync failure:", e);
+        console.error("[Auth] Login error:", e.message);
+        throw e;
       }
-
-      return { data: json, error: null };
     },
     logout: async () => {
       await supabase.auth.signOut().catch(() => { });
-      localStorage.clear();
+      localStorage.removeItem(STORAGE_KEY);
       window.location.href = '/';
     }
   },
@@ -98,10 +108,8 @@ export const base44 = {
               request = request.order(column, { ascending: !isDesc })
             }
             const { data, error } = await request
-            if (error) throw error
             return data || []
           } catch (e) {
-            console.error(`List error for ${tableName}:`, e);
             return [];
           }
         },
@@ -126,11 +134,5 @@ export const base44 = {
     get: (target, name) => {
       return async () => ({ success: true });
     }
-  }),
-  agents: {
-    conversations: {},
-    listeners: {},
-    createConversation: async () => ({ id: Math.random() }),
-    addMessage: async () => ({})
-  }
+  })
 }
