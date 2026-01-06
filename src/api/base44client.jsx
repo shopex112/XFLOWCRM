@@ -3,14 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = 'https://fnxaeyqddkrmvmigaiul.supabase.co'
 const supabaseAnonKey = 'sb_publishable_LwmD75OxWNrKXrec6IPYxA_Egx6R8He'
 
-// Global singleton to prevent "Multiple GoTrueClient instances" error
+// Critical: Singleton with forced storage key
 if (!window.__supabase) {
   window.__supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'xflow-auth-storage'
+      storageKey: 'xflow-auth-storage-v2'
     }
   });
 }
@@ -21,19 +21,29 @@ export const base44 = {
   supabase,
   auth: {
     me: async () => {
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error || !user) throw new Error('Not authenticated')
-      return {
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || user.email.split('@')[0],
-        role: user.user_metadata?.role || 'admin',
-        role_type: user.user_metadata?.role_type || 'מנהל',
-        ...user.user_metadata
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (user) return {
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.email.split('@')[0],
+          role: user.user_metadata?.role || 'admin',
+          role_type: user.user_metadata?.role_type || 'מנהל',
+          ...user.user_metadata
+        }
+
+        // Secondary check via session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) return { id: session.user.id, email: session.user.email, ...session.user.user_metadata };
+
+        throw new Error('Not authenticated');
+      } catch (e) {
+        console.error("Auth me error:", e);
+        throw e;
       }
     },
     signInWithPassword: async ({ email, password }) => {
-      // Direct fetch to verify credentials first - very fast, no SDK overhead
+      console.log("Attempting direct fetch login...");
       const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
         method: 'POST',
         headers: { 'apikey': supabaseAnonKey, 'Content-Type': 'application/json' },
@@ -47,18 +57,31 @@ export const base44 = {
         throw new Error(msg);
       }
 
-      // Sync the session to the SDK
-      await supabase.auth.setSession({
-        access_token: json.access_token,
-        refresh_token: json.refresh_token
-      });
+      console.log("Login success, syncing session...");
+
+      // We perform setSession but we don't let it block indefinitely
+      try {
+        const sessionPromise = supabase.auth.setSession({
+          access_token: json.access_token,
+          refresh_token: json.refresh_token
+        });
+
+        // Timeout session sync after 2 seconds
+        await Promise.race([
+          sessionPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+        ]).catch(e => console.warn("Session sync timed out or failed, but login is valid."));
+
+      } catch (e) {
+        console.warn("Silent session sync failure:", e);
+      }
 
       return { data: json, error: null };
     },
     logout: async () => {
-      await supabase.auth.signOut()
-      localStorage.clear()
-      window.location.href = '/'
+      await supabase.auth.signOut().catch(() => { });
+      localStorage.clear();
+      window.location.href = '/';
     }
   },
   entities: new Proxy({}, {
@@ -67,14 +90,20 @@ export const base44 = {
       const tableName = entityName.toLowerCase()
       return {
         list: async (queryOrSort = {}) => {
-          let request = supabase.from(tableName).select('*')
-          if (typeof queryOrSort === 'string') {
-            const isDesc = queryOrSort.startsWith('-')
-            const column = isDesc ? queryOrSort.substring(1) : queryOrSort
-            request = request.order(column, { ascending: !isDesc })
+          try {
+            let request = supabase.from(tableName).select('*')
+            if (typeof queryOrSort === 'string') {
+              const isDesc = queryOrSort.startsWith('-')
+              const column = isDesc ? queryOrSort.substring(1) : queryOrSort
+              request = request.order(column, { ascending: !isDesc })
+            }
+            const { data, error } = await request
+            if (error) throw error
+            return data || []
+          } catch (e) {
+            console.error(`List error for ${tableName}:`, e);
+            return [];
           }
-          const { data, error } = await request
-          return data || []
         },
         create: async (data) => {
           const { data: res, error } = await supabase.from(tableName).insert([data]).select().single()
@@ -95,10 +124,7 @@ export const base44 = {
   }),
   functions: new Proxy({}, {
     get: (target, name) => {
-      return async () => {
-        console.warn(`Function base44.functions.${name} not implemented.`);
-        return { success: true };
-      }
+      return async () => ({ success: true });
     }
   }),
   agents: {

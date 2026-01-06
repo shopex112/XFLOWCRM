@@ -114,11 +114,12 @@ export default function Pages() {
 
     React.useEffect(() => {
         const checkUser = async () => {
-            // Force timeout after 4 seconds if SDK hangs
+            // Very aggressive timeout for initial auth check
             const timeoutId = setTimeout(() => {
+                console.warn("Auth check stalled, showing login.");
                 setLoading(false);
                 setAuthReady(true);
-            }, 4000);
+            }, 2500);
 
             try {
                 const { data: { session } } = await supabase.auth.getSession();
