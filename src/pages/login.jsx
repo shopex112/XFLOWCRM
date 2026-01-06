@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '@/api/base44client';
+import { supabase, base44 } from '@/api/base44client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -18,7 +18,7 @@ export default function Login() {
         setIsLoading(true);
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await base44.auth.signInWithPassword({
                 email,
                 password,
             });

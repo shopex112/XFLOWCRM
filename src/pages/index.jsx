@@ -1,5 +1,5 @@
 import React from "react";
-import { base44 } from "@/api/base44client";
+import { base44, supabase } from "@/api/base44client";
 import Login from "./login.jsx";
 import Layout from "./layout.jsx";
 
@@ -114,9 +114,14 @@ export default function Pages() {
 
     React.useEffect(() => {
         const checkUser = async () => {
+            // Force timeout after 4 seconds if SDK hangs
+            const timeoutId = setTimeout(() => {
+                setLoading(false);
+                setAuthReady(true);
+            }, 4000);
+
             try {
-                // One call to get the session and user data
-                const { data: { session } } = await base44.supabase.auth.getSession();
+                const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
                     const userData = await base44.auth.me();
                     setUser(userData);
@@ -124,6 +129,7 @@ export default function Pages() {
             } catch (err) {
                 console.error("Auth check failed:", err);
             } finally {
+                clearTimeout(timeoutId);
                 setLoading(false);
                 setAuthReady(true);
             }
