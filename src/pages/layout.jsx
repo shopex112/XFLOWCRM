@@ -49,20 +49,20 @@ const hasPermission = (user, permission) => {
   return user.permissions?.[permission] === true;
 };
 
-export default function Layout({ children }) {
+export default function Layout({ children, user: propUser }) {
   const location = useLocation();
-  const [user, setUser] = React.useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newJobsCount, setNewJobsCount] = useState(0);
   const [businessSettings, setBusinessSettings] = useState({ business_name: "", business_logo: "" });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const user = propUser;
+
   const updateStatusMutation = useMutation({
     mutationFn: (newStatus) => base44.auth.updateMe({ availability_status: newStatus }),
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(['currentUser'], updatedUser);
-      setUser(updatedUser);
       toast({ title: "✓ הסטטוס עודכן" });
     },
     onError: () => {
@@ -72,13 +72,21 @@ export default function Layout({ children }) {
 
   const { data: jobs = [], isLoading: isLoadingJobs } = useQuery({
     queryKey: ['jobs'],
-    queryFn: () => base44.entities.Job.list(),
+    queryFn: async () => {
+      try {
+        const res = await base44.entities.Job.list();
+        return Array.isArray(res) ? res : [];
+      } catch (e) {
+        return [];
+      }
+    },
     enabled: !!user && user.role_type === "איש צוות",
-    refetchInterval: 30000,
+    refetchInterval: 60000,
+    retry: false,
   });
 
   React.useEffect(() => {
-    if (user && user.role_type === "איש צוות" && jobs.length > 0) {
+    if (user && user.role_type === "איש צוות" && jobs && jobs.length > 0) {
       const myNewJobs = jobs.filter(j =>
         j.installer_email === user.email &&
         j.status === "פתוח"
@@ -89,11 +97,18 @@ export default function Layout({ children }) {
     }
   }, [jobs, user]);
 
-
-
   const { data: settingsData } = useQuery({
     queryKey: ['businessSettings'],
-    queryFn: () => base44.entities.Settings.list(),
+    queryFn: async () => {
+      try {
+        const res = await base44.entities.Settings.list();
+        return Array.isArray(res) ? res : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    retry: false,
+    staleTime: Infinity,
   });
 
   useEffect(() => {
@@ -104,27 +119,6 @@ export default function Layout({ children }) {
       });
     }
   }, [settingsData]);
-
-  React.useEffect(() => {
-    base44.auth.me().then(user => {
-      setUser(user);
-      queryClient.setQueryData(['currentUser'], user);
-
-      // בדיקת מנוי - רק אם לא כבר בדף החידוש
-      if (user.subscription_end_date && location.pathname !== createPageUrl('RenewSubscription')) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const endDate = new Date(user.subscription_end_date);
-        endDate.setHours(0, 0, 0, 0);
-
-        if (endDate < today) {
-          window.location.href = createPageUrl('RenewSubscription');
-        }
-      }
-    }).catch(() => {
-      setUser(null);
-    });
-  }, []);
 
   const handleLogout = () => {
     base44.auth.logout();
@@ -213,7 +207,7 @@ export default function Layout({ children }) {
   return (
     <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50" dir="rtl" onClick={(e) => { if (!e.target.closest('[data-sidebar]') && !e.target.closest('button[data-sidebar-trigger]')) { e.stopPropagation(); } }}>
-        <Sidebar side="right" className="border-r border-slate-200 bg-white shadow-2xl z-50" collapsible="none">
+        <Sidebar side="right" className="border-r border-slate-200 bg-white shadow-2xl z-50" collapsible="icon">
           <SidebarHeader className="border-b border-slate-100 p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -396,8 +390,6 @@ export default function Layout({ children }) {
           </footer>
         </main>
       </div>
-      <Toaster />
     </SidebarProvider>
   );
 }
-
