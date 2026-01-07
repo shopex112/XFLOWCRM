@@ -387,19 +387,10 @@ export default function Leads() {
     }
   };
 
-  const handleQuickReject = (lead) => {
-    setLeadToUpdate({ ...lead, status: 'לא רלוונטי' });
-    setLostReason("");
-    setCustomReason("");
-    setIsAddingCustomReason(false);
-    setIsLostReasonDialogOpen(true);
-  };
-
   // טיפול בפרמטרי URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const filter = urlParams.get('filter');
-    const timeRangeParam = urlParams.get('timeRange');
 
     if (filter) {
       switch (filter) {
@@ -457,13 +448,6 @@ export default function Leads() {
     "התקיימה פגישה": "bg-purple-100 text-purple-800",
     "לא סגר": "bg-orange-100 text-orange-800",
     "סגר": "bg-green-100 text-green-800"
-  };
-
-  const ratingColors = {
-    "ליד קריר": "bg-blue-100 text-blue-800 border-2 border-blue-300",
-    "ליד קר קרח": "bg-cyan-100 text-cyan-800 border-2 border-cyan-300",
-    "ליד נחמד": "bg-orange-100 text-orange-800 border-2 border-orange-300",
-    "ליד חם אש": "bg-red-100 text-red-800 border-2 border-red-400 shadow-lg"
   };
 
   const ratingIcons = {
