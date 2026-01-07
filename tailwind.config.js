@@ -6,13 +6,13 @@ export default {
 	content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
 	theme: {
 		screens: {
-			'xs': '375px',    // Small phones
-			'sm': '640px',    // Large phones / small tablets
-			'md': '768px',    // Tablets
-			'lg': '1024px',   // Small laptops
-			'xl': '1280px',   // Desktops
-			'2xl': '1536px',  // Large desktops
-			'3xl': '1920px',  // Ultra-wide
+			'xs': '375px',
+			'sm': '640px',
+			'md': '768px',
+			'lg': '1024px',
+			'xl': '1280px',
+			'2xl': '1536px',
+			'3xl': '1920px',
 		},
 		extend: {
 			borderRadius: {
@@ -88,4 +88,19 @@ export default {
 					}
 				},
 				'accordion-up': {
-	
+					from: {
+						height: 'var(--radix-accordion-content-height)'
+					},
+					to: {
+						height: '0'
+					}
+				}
+			},
+			animation: {
+				'accordion-down': 'accordion-down 0.2s ease-out',
+				'accordion-up': 'accordion-up 0.2s ease-out'
+			}
+		}
+	},
+	plugins: [tailwindcssAnimate]
+}
