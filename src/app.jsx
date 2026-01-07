@@ -1,11 +1,14 @@
-import React from 'react'
-import Protected from './components/protected'
-import Dashboard from './pages/dashboard'
+import './app.css'
+import Pages from "@/pages/index.jsx"
+import { Toaster } from "@/components/ui/toaster"
 
-export default function App() {
+function App() {
   return (
-    <Protected>
-      <Dashboard />
-    </Protected>
+    <>
+      <Pages />
+      <Toaster />
+    </>
   )
 }
+
+export default App
