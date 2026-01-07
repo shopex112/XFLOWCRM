@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, Users, Calendar, Target, Award, DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
-import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
-import { he } from "date-fns/locale";
+import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 
 const MetricCard = ({ title, value, color, icon: Icon }) => (
   <Card className="border-none shadow-md bg-white hover:shadow-lg transition-shadow">
@@ -28,42 +26,45 @@ export default function Dashboard() {
   const [questionnaireFilter, setQuestionnaireFilter] = useState("all");
 
   const { data: leads = [] } = useQuery({
-    queryKey: ['leads'],
-    queryFn: () => base44.entities.Lead.list('-created_date'),
+    queryKey: ["leads"],
+    queryFn: () => base44.entities.Lead.list("-created_date"),
   });
 
-  const filteredLeadsByTime = leads.filter(lead => {
-    if (timeFilter === "all") return true;
-    
-    const createdDate = new Date(lead.created_date);
-    const now = new Date();
-    
-    if (timeFilter === "month") {
-      return createdDate >= startOfMonth(now) && createdDate <= endOfMonth(now);
-    } else if (timeFilter === "quarter") {
-      return createdDate >= startOfQuarter(now) && createdDate <= endOfQuarter(now);
-    } else if (timeFilter === "year") {
-      return createdDate >= startOfYear(now) && createdDate <= endOfYear(now);
-    }
-    return true;
-  });
+  // פילטר לפי זמן
+  const filteredLeadsByTime = useMemo(() => {
+    return leads.filter((lead) => {
+      if (timeFilter === "all") return true;
 
-  const filteredLeads = filteredLeadsByTime.filter(lead => {
-    if (questionnaireFilter === "all") return true;
-    if (questionnaireFilter === "filled") return lead.filled_questionnaire === true;
-    if (questionnaireFilter === "not_filled") return lead.filled_questionnaire !== true;
-    return true;
-  });
+      const createdDate = new Date(lead.created_date);
+      const now = new Date();
+
+      if (timeFilter === "month") return createdDate >= startOfMonth(now) && createdDate <= endOfMonth(now);
+      if (timeFilter === "quarter") return createdDate >= startOfQuarter(now) && createdDate <= endOfQuarter(now);
+      if (timeFilter === "year") return createdDate >= startOfYear(now) && createdDate <= endOfYear(now);
+
+      return true;
+    });
+  }, [leads, timeFilter]);
+
+  // פילטר לפי שאלון
+  const filteredLeads = useMemo(() => {
+    return filteredLeadsByTime.filter((lead) => {
+      if (questionnaireFilter === "all") return true;
+      if (questionnaireFilter === "filled") return lead.filled_questionnaire === true;
+      if (questionnaireFilter === "not_filled") return lead.filled_questionnaire !== true;
+      return true;
+    });
+  }, [filteredLeadsByTime, questionnaireFilter]);
 
   // סטטיסטיקות משפך
   const funnelStats = {
-    new: filteredLeads.filter(l => l.status === "חדש").length,
-    inProcess: filteredLeads.filter(l => l.status === "בתהליך").length,
-    notRelevant: filteredLeads.filter(l => l.status === "לא רלוונטי").length,
-    meetingScheduled: filteredLeads.filter(l => l.status === "נקבעה פגישה").length,
-    meetingHeld: filteredLeads.filter(l => l.status === "התקיימה פגישה").length,
-    notClosed: filteredLeads.filter(l => l.status === "לא סגר").length,
-    closed: filteredLeads.filter(l => l.status === "סגר").length
+    new: filteredLeads.filter((l) => l.status === "חדש").length,
+    inProcess: filteredLeads.filter((l) => l.status === "בתהליך").length,
+    notRelevant: filteredLeads.filter((l) => l.status === "לא רלוונטי").length,
+    meetingScheduled: filteredLeads.filter((l) => l.status === "נקבעה פגישה").length,
+    meetingHeld: filteredLeads.filter((l) => l.status === "התקיימה פגישה").length,
+    notClosed: filteredLeads.filter((l) => l.status === "לא סגר").length,
+    closed: filteredLeads.filter((l) => l.status === "סגר").length,
   };
 
   // סטטיסטיקות מקורות
@@ -90,27 +91,21 @@ export default function Dashboard() {
     acc[method] = (acc[method] || 0) + 1;
     return acc;
   }, {});
-  const { data: leads = [] } = useQuery({
-  queryKey: ['leads'],
-  queryFn: () => base44.entities.Lead.list('-created_date'),
-});
+
   // שיעור המרה
-  const conversionRate = filteredLeads.length > 0 
-    ? ((funnelStats.closed / filteredLeads.length) * 100).toFixed(1) 
+  const conversionRate = filteredLeads.length > 0
+    ? ((funnelStats.closed / filteredLeads.length) * 100).toFixed(1)
     : 0;
 
+  // הכנסות
   const totalRevenue = filteredLeads
-    .filter(l => l.status === "סגר")
+    .filter((l) => l.status === "סגר")
     .reduce((sum, l) => sum + (l.actual_value || 0), 0);
 
   return (
     <div className="p-4 md:p-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">דשבורד</h1>
           <p className="text-slate-600">סטטיסטיקות ליווי אישי לבניית חנות שופיפי</p>
         </motion.div>
