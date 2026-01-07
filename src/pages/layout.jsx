@@ -51,7 +51,6 @@ const hasPermission = (user, permission) => {
 
 export default function Layout({ children, user: propUser }) {
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newJobsCount, setNewJobsCount] = useState(0);
   const [businessSettings, setBusinessSettings] = useState({ business_name: "", business_logo: "" });
   const queryClient = useQueryClient();
@@ -205,9 +204,9 @@ export default function Layout({ children, user: propUser }) {
   const navigationItems = getNavigationItems();
 
   return (
-    <SidebarProvider open={sidebarOpen} onOpenChange={setSidebarOpen}>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50" dir="rtl" onClick={(e) => { if (!e.target.closest('[data-sidebar]') && !e.target.closest('button[data-sidebar-trigger]')) { e.stopPropagation(); } }}>
-        <Sidebar side="right" className="border-r border-slate-200 bg-white shadow-2xl z-50" collapsible="icon">
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-blue-50" dir="rtl">
+        <Sidebar side="right" className="border-r border-slate-200 bg-white shadow-2xl" collapsible="offcanvas">
           <SidebarHeader className="border-b border-slate-100 p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -223,7 +222,7 @@ export default function Layout({ children, user: propUser }) {
                   <p className="text-xs text-slate-500">מערכת ניהול</p>
                 </div>
               </div>
-              <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors">
+              <SidebarTrigger className="lg:hidden hover:bg-slate-100 p-2 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-slate-600" />
               </SidebarTrigger>
             </div>
@@ -248,29 +247,27 @@ export default function Layout({ children, user: propUser }) {
                     .map((item) => {
                       const isActive = location.pathname === item.url;
                       const ItemIcon = item.icon;
-                      const isAdminItem = item.icon === Shield || item.icon === Settings;
-                      const isTasksPage = item.title === "המשימות שלי";
 
                       return (
-                        <SidebarMenuItem key={item.title}>
+                        <SidebarMenuItem key={item.url}>
                           <SidebarMenuButton
                             asChild
-                            className={`transition-all duration-200 rounded-xl mb-1 ${isAdminItem
-                              ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg hover:shadow-xl'
-                              : item.highlight
-                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl'
-                                : isActive
-                                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg'
-                                  : 'hover:bg-slate-50 text-slate-700'
-                              }`}
+                            isActive={isActive}
+                            className={`
+                              group relative overflow-hidden transition-all duration-200
+                              ${isActive
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-200 hover:shadow-xl'
+                                : 'hover:bg-slate-50 text-slate-700 hover:text-blue-600'
+                              }
+                            `}
                           >
-                            <Link to={item.url} className="flex items-center gap-3 px-4 py-3 relative">
-                              <ItemIcon className={`w-5 h-5 ${isAdminItem || item.highlight || isActive ? 'text-white' : 'text-slate-500'}`} />
+                            <Link to={item.url} className="flex items-center gap-3 px-4 py-3 rounded-xl">
+                              <ItemIcon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-600'}`} />
                               <span className="font-medium">{item.title}</span>
-                              {isTasksPage && newJobsCount > 0 && (
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
-                                  {newJobsCount}
-                                </span>
+                              {item.badge && (
+                                <Badge className="mr-auto bg-red-500 text-white text-xs px-2 py-0.5">
+                                  {item.badge}
+                                </Badge>
                               )}
                             </Link>
                           </SidebarMenuButton>
@@ -337,29 +334,29 @@ export default function Layout({ children, user: propUser }) {
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col">
-          <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 px-6 py-4 sticky top-0 z-30 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors duration-200">
+        <main className="flex-1 flex flex-col min-w-0">
+          <header className="bg-white/95 backdrop-blur-sm border-b border-slate-200 px-2 sm:px-4 md:px-6 py-2 md:py-3 sticky top-0 z-40 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 md:gap-3 min-w-0 flex-1">
+                <SidebarTrigger className="hover:bg-slate-100 active:bg-slate-200 p-3 rounded-lg transition-colors touch-manipulation flex-shrink-0">
                   <Menu className="w-6 h-6 text-slate-700" />
                 </SidebarTrigger>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 min-w-0">
                   {businessSettings.business_logo ? (
-                    <img src={businessSettings.business_logo} alt="לוגו" className="w-10 h-10 object-contain rounded-xl shadow-md" />
+                    <img src={businessSettings.business_logo} alt="לוגו" className="w-8 h-8 md:w-10 md:h-10 object-contain rounded-lg shadow-sm flex-shrink-0" />
                   ) : (
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-md">
-                      <Building2 className="w-6 h-6 text-white" />
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
+                      <Building2 className="w-4 h-4 md:w-6 md:h-6 text-white" />
                     </div>
                   )}
-                  <div>
-                    <h1 className="text-xl font-bold text-slate-900">{businessSettings.business_name || "CRM"}</h1>
-                    <p className="text-xs text-slate-500 hidden md:block">מערכת ניהול</p>
+                  <div className="hidden xs:block min-w-0">
+                    <h1 className="text-sm sm:text-base md:text-xl font-bold text-slate-900 truncate">{businessSettings.business_name || "CRM"}</h1>
+                    <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block">מערכת ניהול</p>
                   </div>
                 </div>
               </div>
 
-              {user && <SubscriptionBell subscriptionEndDate={user.subscription_end_date} />}
+              {user && <div className="flex-shrink-0"><SubscriptionBell subscriptionEndDate={user.subscription_end_date} /></div>}
             </div>
           </header>
 
