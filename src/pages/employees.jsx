@@ -657,7 +657,7 @@ const UserMetricsDialog = ({ user, metrics, timeRange, onTimeRangeChange, onClos
 };
 
 export default function Employees() {
-  const [showForm, setShowForm] = useState(false);
+  // const [showForm, setShowForm] = useState(false); // Unused
   const [editingUser, setEditingUser] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
 
@@ -798,22 +798,24 @@ export default function Employees() {
   };
 
   // FIX: Ensure current user is always displayed if list is empty or they are missing
-  let displayedUsers = [];
-
-  if (users.length === 0 && currentUser) {
-    displayedUsers = [currentUser];
-  } else if (isAdmin) {
-    displayedUsers = [...users];
-    // Check if current admin is in the list, if not add them
-    if (!users.find(u => u.email === currentUser?.email) && currentUser) {
-      displayedUsers.unshift(currentUser);
+  const displayedUsers = useMemo(() => {
+    let result = [];
+    if (users.length === 0 && currentUser) {
+      result = [currentUser];
+    } else if (isAdmin) {
+      result = [...users];
+      // Check if current admin is in the list, if not add them
+      if (!users.find(u => u.email === currentUser?.email) && currentUser) {
+        result.unshift(currentUser);
+      }
+    } else {
+      result = users.filter(u => u.email === currentUser?.email);
+      if (result.length === 0 && currentUser) {
+        result = [currentUser];
+      }
     }
-  } else {
-    displayedUsers = users.filter(u => u.email === currentUser?.email);
-    if (displayedUsers.length === 0 && currentUser) {
-      displayedUsers = [currentUser];
-    }
-  }
+    return result;
+  }, [users, currentUser, isAdmin]);
 
   const usersWithMetrics = useMemo(() => {
     return displayedUsers.map(user => {
@@ -847,12 +849,13 @@ export default function Employees() {
               {isAdmin ? `רשימת כל העובדים במערכת (${users.length})` : "פרטים אישיים ומדדי ביצועים"}
             </p>
           </div>
-          {isAdmin && (
+          {/* isAdmin && (
             <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="w-5 h-5 ml-2" />
               הוסף עובד
             </Button>
-          )}
+          ) */
+          /* TODO: Re-implement Add Employee functionality */}
         </motion.div>
 
         {!isAdmin && (
@@ -1057,6 +1060,3 @@ export default function Employees() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
