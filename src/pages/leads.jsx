@@ -460,19 +460,17 @@ export default function Leads() {
   const statusCounts = _.countBy(leads, 'status');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
-      <div className="max-w-5xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4"
-        >
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 md:mb-8">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-              <TrendingUp className="w-10 h-10 text-blue-600" />
-              לידים
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-1 md:mb-2 flex items-center gap-2 md:gap-3">
+              <TrendingUp className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
+              ניהול לידים
             </h1>
-            <p className="text-slate-600">ניהול לקוחות פוטנציאליים ({filteredLeads.length})</p>
+            <p className="text-sm md:text-base text-slate-600">
+              {filteredLeads.length} לידים מתוך {leads.length} סה"כ
+            </p>
           </div>
           <Button
             onClick={() => {
@@ -500,14 +498,14 @@ export default function Leads() {
                 serial_number: ""
               });
             }}
-            className="bg-blue-600 hover:bg-blue-700 shadow-lg text-white"
+            className="bg-blue-600 hover:bg-blue-700 shadow-lg text-white h-11 md:h-auto touch-manipulation w-full sm:w-auto"
           >
             <Plus className="w-5 h-5 mr-2" />
             ליד חדש
           </Button>
         </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 md:gap-4 mb-4 md:mb-6">
           <div onClick={() => setStatusFilter('חדש')} className="cursor-pointer">
             <MetricCard title="חדש" value={statusCounts['חדש'] || 0} color="text-gray-600" />
           </div>
@@ -531,26 +529,28 @@ export default function Leads() {
           </div>
         </div>
 
-        <Card className="mb-6 border-none shadow-lg bg-white p-4">
-          <div className="flex flex-col gap-4">
+        <Card className="mb-4 md:mb-6 border-none shadow-lg bg-white p-3 md:p-4">
+          <div className="flex flex-col gap-3 md:gap-4">
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-sm font-semibold text-slate-600">סינון לפי סטטוס:</span>
+                <span className="text-xs md:text-sm font-semibold text-slate-600 w-full sm:w-auto mb-1 sm:mb-0">סינון לפי סטטוס:</span>
                 <Button
                   variant={statusFilter === "all" ? "default" : "outline"}
                   onClick={() => setStatusFilter("all")}
                   size="sm"
+                  className="touch-manipulation"
                 >
                   הכל
                 </Button>
               </div>
 
               <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-sm font-semibold text-slate-600">סינון לפי דירוג חום:</span>
+                <span className="text-xs md:text-sm font-semibold text-slate-600 w-full sm:w-auto mb-1 sm:mb-0">דירוג חום:</span>
                 <Button
                   variant={ratingFilter === "all" ? "default" : "outline"}
                   onClick={() => setRatingFilter("all")}
                   size="sm"
+                  className="touch-manipulation"
                 >
                   הכל
                 </Button>
@@ -558,7 +558,7 @@ export default function Leads() {
                   variant={ratingFilter === "ליד קר קרח" ? "default" : "outline"}
                   onClick={() => setRatingFilter("ליד קר קרח")}
                   size="sm"
-                  className={ratingFilter === "ליד קר קרח" ? "" : "border-cyan-300"}
+                  className={`touch-manipulation ${ratingFilter === "ליד קר קרח" ? "" : "border-cyan-300"}`}
                 >
                   🧊 קר קרח
                 </Button>
@@ -566,7 +566,7 @@ export default function Leads() {
                   variant={ratingFilter === "ליד קריר" ? "default" : "outline"}
                   onClick={() => setRatingFilter("ליד קריר")}
                   size="sm"
-                  className={ratingFilter === "ליד קריר" ? "" : "border-blue-300"}
+                  className={`touch-manipulation ${ratingFilter === "ליד קריר" ? "" : "border-blue-300"}`}
                 >
                   ❄️ קריר
                 </Button>
@@ -574,7 +574,7 @@ export default function Leads() {
                   variant={ratingFilter === "ליד נחמד" ? "default" : "outline"}
                   onClick={() => setRatingFilter("ליד נחמד")}
                   size="sm"
-                  className={ratingFilter === "ליד נחמד" ? "" : "border-orange-300"}
+                  className={`touch-manipulation ${ratingFilter === "ליד נחמד" ? "" : "border-orange-300"}`}
                 >
                   🌤️ נחמד
                 </Button>
@@ -582,18 +582,19 @@ export default function Leads() {
                   variant={ratingFilter === "ליד חם אש" ? "default" : "outline"}
                   onClick={() => setRatingFilter("ליד חם אש")}
                   size="sm"
-                  className={ratingFilter === "ליד חם אש" ? "" : "border-red-400"}
+                  className={`touch-manipulation ${ratingFilter === "ליד חם אש" ? "" : "border-red-400"}`}
                 >
                   🔥 חם אש
                 </Button>
               </div>
 
               <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-sm font-semibold text-slate-600">סינון לפי שאלון:</span>
+                <span className="text-xs md:text-sm font-semibold text-slate-600 w-full sm:w-auto mb-1 sm:mb-0">שאלון:</span>
                 <Button
                   variant={questionnaireFilter === "all" ? "default" : "outline"}
                   onClick={() => setQuestionnaireFilter("all")}
                   size="sm"
+                  className="touch-manipulation"
                 >
                   הכל
                 </Button>
@@ -601,26 +602,28 @@ export default function Leads() {
                   variant={questionnaireFilter === "yes" ? "default" : "outline"}
                   onClick={() => setQuestionnaireFilter("yes")}
                   size="sm"
+                  className="touch-manipulation"
                 >
-                  ✅ מילא שאלון
+                  ✅ מילא
                 </Button>
                 <Button
                   variant={questionnaireFilter === "no" ? "default" : "outline"}
                   onClick={() => setQuestionnaireFilter("no")}
                   size="sm"
+                  className="touch-manipulation"
                 >
-                  ❌ לא מילא שאלון
+                  ❌ לא מילא
                 </Button>
               </div>
             </div>
 
             <div className="relative">
-              <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <Search className="absolute right-3 md:right-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <Input
-                placeholder="חיפוש לידים (שם, טלפון, מספר סידורי)..."
+                placeholder="חיפוש לידים..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-12 text-lg h-12"
+                className="pr-10 md:pr-12 text-base md:text-lg h-11 md:h-12 touch-manipulation"
               />
             </div>
           </div>
@@ -688,12 +691,12 @@ export default function Leads() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
+                  <div className="flex flex-col gap-2 pt-4 border-t border-slate-100">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={() => handleEdit(lead)}
-                      className="border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold"
+                      className="w-full border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold h-11 touch-manipulation"
                     >
                       <Edit className="w-4 h-4 ml-2" />
                       עריכה
@@ -702,31 +705,28 @@ export default function Leads() {
                       href={`https://wa.me/972${lead.customer_phone?.replace(/^0/, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full flex"
+                      className="w-full"
                     >
                       <Button
                         variant="soft"
-                        size="sm"
-                        className="w-full bg-green-50 hover:bg-green-100 text-green-700 font-semibold border-none"
+                        size="default"
+                        className="w-full bg-green-50 hover:bg-green-100 text-green-700 font-semibold border-none h-11 touch-manipulation"
                       >
                         <MessageSquare className="w-4 h-4 ml-2" />
-                        וואטסאפ
+                        שלח וואטסאפ
                       </Button>
                     </a>
-                  </div>
-
-                  <div className="mt-3 flex gap-2">
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="default"
                       onClick={() => {
                         const quoteUrl = createPageUrl('Quotes', { leadId: lead.id, customerName: lead.customer_name });
                         navigate(quoteUrl);
                       }}
-                      className="flex-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold"
+                      className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold h-11 touch-manipulation"
                     >
                       <FileText className="w-4 h-4 ml-2" />
-                      הצעת מחיר
+                      צור הצעת מחיר
                     </Button>
                     <Button
                       variant="ghost"
