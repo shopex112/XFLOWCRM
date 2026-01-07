@@ -42,7 +42,7 @@ function _getCurrentPage(url) {
     let urlLastPart = url.split('/').pop();
     if (urlLastPart.includes('?')) urlLastPart = urlLastPart.split('?')[0];
     const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
-    return pageName || Object.keys(PAGES)[0];
+    return pageName || 'Tasks';
 }
 
 function PagesContent({ user }) {
@@ -86,80 +86,88 @@ export default function Pages() {
     const [user, setUser] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
 
+    // Consolidated auth check and listener
     React.useEffect(() => {
         let mounted = true;
 
-        const checkUser = async () => {
-            console.log("Starting Auth check...");
+        const syncUser = async (session) => {
+            if (!mounted) return;
 
-            // Timeout safety - don't stay stuck on spinner forever
-            const timeout = setTimeout(() => {
-                if (mounted && loading) {
-                    console.warn("Auth check stalled, forcing loader off.");
-                    setLoading(false);
-                }
-            }, 5000);
-
-            try {
-                // 1. Get Session directly immediately
-                const { data: { session }, error } = await supabase.auth.getSession();
-
-                if (error) {
-                    console.error("Session error:", error);
-                }
-
-                if (session?.user && mounted) {
-                    console.log("Session found for:", session.user.email);
-                    // 2. Set basic user IMMEDIATELY found in session
-                    const basicUser = {
-                        id: session.user.id,
-                        email: session.user.email,
-                        role_type: 'manager',
-                    };
-                    setUser(basicUser);
-
-                    // 3. Try to enrich with DB data in background
-                    try {
-                        const dbUser = await base44.auth.me();
-                        if (mounted && dbUser) {
-                            console.log("User enriched from DB");
-                            setUser(dbUser);
-                        }
-                    } catch (dbError) {
-                        console.warn("Could not fetch extra user details, staying with basic session user:", dbError);
-                    }
-                } else {
-                    console.log("No proactive session found.");
-                }
-            } catch (err) {
-                console.error("Critical Auth Error:", err.message);
-            } finally {
-                clearTimeout(timeout);
-                if (mounted) {
-                    console.log("Auth check complete, setting loading to false");
-                    setLoading(false);
-                }
-            }
-        };
-
-        checkUser();
-
-        // Listen for auth changes
-        const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("Auth state change:", event);
-            if (event === 'SIGNED_IN' && session?.user && mounted) {
-                setUser({
+            if (session?.user) {
+                console.log("Syncing user:", session.user.email);
+                const basicUser = {
                     id: session.user.id,
                     email: session.user.email,
-                    role_type: 'manager'
-                });
-            } else if (event === 'SIGNED_OUT') {
-                if (mounted) setUser(null);
+                    role_type: 'manager',
+                };
+
+                // Set basic user first
+                setUser(prev => prev?.id === basicUser.id ? prev : basicUser);
+
+                try {
+                    const dbUser = await base44.auth.me();
+                    if (mounted && dbUser) {
+                        setUser(dbUser);
+                    }
+                } catch (err) {
+                    console.warn("Could not enrich user:", err);
+                }
+            } else {
+                console.log("No session, setting user to null");
+                setUser(null);
+            }
+
+            setLoading(false);
+        };
+
+        // Initial check
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (mounted) syncUser(session);
+        });
+
+        // Listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log("Auth event:", event);
+            if (mounted) {
+                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    syncUser(session);
+                } else if (event === 'SIGNED_OUT') {
+                    setUser(null);
+                    setLoading(false);
+                }
             }
         });
 
+        const timeout = setTimeout(() => {
+            if (mounted && loading) {
+                console.warn("Auth timeout reached");
+                setLoading(false);
+            }
+        }, 10000);
+
         return () => {
             mounted = false;
-            listener?.subscription?.unsubscribe();
+            subscription.unsubscribe();
+            clearTimeout(timeout);
         };
- 
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col justify-center items-center h-screen bg-slate-50 gap-4" dir="rtl">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="text-slate-600 font-medium">מתחבר למערכת...</div>
+            </div>
+        );
+    }
+
+    if (!user) {
+        return <Login />;
+    }
+
+    return (
+        <Router>
+            <PagesContent user={user} />
+        </Router>
+    );
+}
