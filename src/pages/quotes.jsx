@@ -31,12 +31,20 @@ export default function Quotes() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [isAddingCustomReason, setIsAddingCustomReason] = useState(false);
-  
+  const [quoteToDelete, setQuoteToDelete] = useState(null);
+
+  const confirmDelete = () => {
+    if (quoteToDelete) {
+      deleteMutation.mutate(quoteToDelete.id);
+      setQuoteToDelete(null);
+    }
+  };
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then(setUser).catch(() => { });
   }, []);
 
   const { data: quotes = [] } = useQuery({
@@ -50,7 +58,7 @@ export default function Quotes() {
     queryFn: () => base44.entities.Lead.list(),
     initialData: []
   });
-  
+
   const { data: inventory = [] } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => base44.entities.Inventory.list(),
@@ -70,7 +78,7 @@ export default function Quotes() {
   // טיפול בפרמטרים מה-URL
   useEffect(() => {
     if (!quotes || !leads) return;
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const quoteId = urlParams.get('quote_id');
     const leadId = urlParams.get('lead_id');
@@ -90,45 +98,63 @@ export default function Quotes() {
 
   const leadsWaitingForQuote = leads.filter(l => l.status === "ממתין להצעה");
 
+  // Helper to safe-guard quote payload
+  const cleanQuotePayload = (data) => {
+    const safeData = {
+      customer_name: data.customer_name,
+      status: data.status || "טיוטה",
+      grand_total: data.grand_total || 0,
+    };
+
+    if (data.lead_id) safeData.lead_id = data.lead_id;
+    if (data.customer_phone) safeData.customer_phone = data.customer_phone;
+    if (data.customer_email) safeData.customer_email = data.customer_email;
+    if (data.valid_until) safeData.valid_until = data.valid_until;
+    if (data.items) safeData.items = data.items;
+
+    // Financials and Logic
+    if (data.discount !== undefined) safeData.discount = data.discount;
+    if (data.vat !== undefined) safeData.vat = data.vat;
+    if (data.notes) safeData.notes = data.notes;
+
+    // Handle sub_total confusion
+    if (data.sub_total !== undefined) safeData.sub_total = data.sub_total;
+    else if (data.subtotal !== undefined) safeData.sub_total = data.subtotal;
+
+    if (data.payment_link) safeData.payment_link = data.payment_link;
+    if (data.payment_status) safeData.payment_status = data.payment_status;
+
+    return safeData;
+  };
+
   const createOrUpdateMutation = useMutation({
     mutationFn: async (data) => {
+      const payload = cleanQuotePayload(data);
+
       if (editingQuote) {
-        return base44.entities.Quote.update(editingQuote.id, data);
+        return base44.entities.Quote.update(editingQuote.id, payload);
       } else {
-        const allQuotes = await base44.entities.Quote.list();
-        const maxSerial = allQuotes.reduce((max, quote) => {
-          if (quote.serial_number && quote.serial_number.startsWith('3')) {
-            const num = parseInt(quote.serial_number.substring(1), 10);
-            if (!isNaN(num)) {
-              return num > max ? num : max;
-            }
-          }
-          return max;
-        }, 0);
-        const newSerial = `3${String(maxSerial + 1).padStart(4, '0')}`;
-        
-        return base44.entities.Quote.create({
-          ...data,
-          serial_number: newSerial
-        });
+        // Serial Logic REMOVED for stability
+        // Just create generic quote
+        return base44.entities.Quote.create(payload);
       }
     },
     onSuccess: async (savedQuote) => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      
+
       // עדכון הליד ל"התקיימה פגישה" אחרי יצירת הצעת מחיר
       if (savedQuote.lead_id && !editingQuote) {
         const lead = leads.find(l => l.id === savedQuote.lead_id);
-        
+
         if (lead) {
-          await base44.entities.Lead.update(lead.id, { 
-            ...lead, 
+          await base44.entities.Lead.update(lead.id, {
+            ...lead,
             status: "התקיימה פגישה",
             quote_id: savedQuote.id
           });
           queryClient.invalidateQueries({ queryKey: ['leads'] });
           toast({ title: "✓ הצעת המחיר נוצרה והליד עודכן ל'התקיימה פגישה'" });
-          
+
           // חזרה לעמוד הלידים
           setTimeout(() => {
             window.location.href = '/Leads';
@@ -136,13 +162,13 @@ export default function Quotes() {
           return;
         }
       }
-      
+
       if (savedQuote.lead_id && savedQuote.status === "אושרה") {
         const lead = leads.find(l => l.id === savedQuote.lead_id);
-        
+
         if (lead) {
-          await base44.entities.Lead.update(lead.id, { 
-            ...lead, 
+          await base44.entities.Lead.update(lead.id, {
+            ...lead,
             status: "הצעה אושרה",
             quote_status: "אושרה",
             quote_id: savedQuote.id
@@ -150,11 +176,11 @@ export default function Quotes() {
           queryClient.invalidateQueries({ queryKey: ['leads'] });
         }
       }
-      
+
       setShowForm(false);
       setEditingQuote(null);
       setSelectedLead(null);
-      
+
       // החזרת ההצעה שנשמרה
       return savedQuote;
     },
@@ -179,10 +205,7 @@ export default function Quotes() {
       toast({ title: "אין הרשאה", description: "רק מנהל יכול למחוק הצעות מחיר", variant: "destructive" });
       return;
     }
-    
-    if (confirm(`האם למחוק את הצעת המחיר של ${quote.customer_name}?`)) {
-      deleteMutation.mutate(quote.id);
-    }
+    setQuoteToDelete(quote);
   };
 
   const handleEdit = (quote) => {
@@ -198,7 +221,7 @@ export default function Quotes() {
     setEditingQuote(null);
     setSelectedLead(null);
   };
-  
+
   const handleNewQuote = () => {
     setEditingQuote(null);
     setSelectedLead(null);
@@ -225,7 +248,7 @@ export default function Quotes() {
     setRejectionReason("");
     setCustomReason("");
     setIsAddingCustomReason(false);
-    
+
     if (type === "won") {
       // סגר - עדכון מיידי
       handleCloseQuoteWon(quote);
@@ -239,19 +262,19 @@ export default function Quotes() {
     try {
       // עדכון ההצעה לאושרה
       await base44.entities.Quote.update(quote.id, { ...quote, status: "אושרה" });
-      
+
       // עדכון הליד לסגר
       if (quote.lead_id) {
         const lead = leads.find(l => l.id === quote.lead_id);
         if (lead) {
-          await base44.entities.Lead.update(lead.id, { 
-            ...lead, 
+          await base44.entities.Lead.update(lead.id, {
+            ...lead,
             status: "סגר",
             actual_value: quote.grand_total || 0
           });
         }
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast({ title: "✓ ההצעה אושרה והליד עודכן ללקוח" });
@@ -265,14 +288,14 @@ export default function Quotes() {
       toast({ title: "נא לבחור סיבה", variant: "destructive" });
       return;
     }
-    
+
     const finalReason = rejectionReason === "אחר - הוסף חדש" ? customReason : rejectionReason;
-    
+
     if (!finalReason) {
       toast({ title: "נא למלא סיבה", variant: "destructive" });
       return;
     }
-    
+
     // אם זו סיבה חדשה, נוסיף אותה להגדרות
     if (rejectionReason === "אחר - הוסף חדש" && settings) {
       const currentReasons = settings.rejection_reasons || [];
@@ -290,23 +313,23 @@ export default function Quotes() {
         queryClient.invalidateQueries({ queryKey: ['settings'] });
       }
     }
-    
+
     try {
       // עדכון ההצעה לבוטלה
       await base44.entities.Quote.update(selectedQuote.id, { ...selectedQuote, status: "בוטלה" });
-      
+
       // עדכון הליד ללא סגר
       if (selectedQuote.lead_id) {
         const lead = leads.find(l => l.id === selectedQuote.lead_id);
         if (lead) {
-          await base44.entities.Lead.update(lead.id, { 
-            ...lead, 
+          await base44.entities.Lead.update(lead.id, {
+            ...lead,
             status: "לא סגר",
             rejection_reason: finalReason
           });
         }
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       setIsClosureDialogOpen(false);
@@ -325,7 +348,7 @@ export default function Quotes() {
     l.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     l.customer_phone?.includes(searchQuery)
   );
-  
+
   const statusColors = {
     "טיוטה": "bg-gray-100 text-gray-800",
     "נשלחה": "bg-blue-100 text-blue-800",
@@ -347,7 +370,7 @@ export default function Quotes() {
               הצעות מחיר
             </h1>
             <p className="text-slate-600">
-              {viewMode === "quotes" 
+              {viewMode === "quotes"
                 ? `ניהול הצעות מחיר (${quotes.length})`
                 : `לידים ממתינים להצעה (${leadsWaitingForQuote.length})`
               }
@@ -373,7 +396,7 @@ export default function Quotes() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            
+
             <div className="relative">
               <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <Input
@@ -407,7 +430,7 @@ export default function Quotes() {
                         <p className="flex items-center gap-2">📞 {lead.customer_phone}</p>
                         <p className="flex items-center gap-2 mt-1">📍 {lead.customer_address}</p>
                       </div>
-                      
+
                       {lead.vehicle_manufacturer && (
                         <div className="bg-slate-50 p-3 rounded-lg">
                           <p className="text-sm font-semibold text-slate-700">פרטי :</p>
@@ -427,9 +450,9 @@ export default function Quotes() {
                           💬 {lead.notes}
                         </div>
                       )}
-                      
+
                       <div className="grid grid-cols-2 gap-2">
-                        <Button 
+                        <Button
                           onClick={() => handleCreateQuoteForLead(lead)}
                           className="w-full bg-blue-600 hover:bg-blue-700"
                         >
@@ -437,9 +460,9 @@ export default function Quotes() {
                           צור הצעה
                         </Button>
                         {lead.customer_phone && (
-                          <a 
-                            href={`https://wa.me/972${lead.customer_phone.replace(/\D/g, '').replace(/^0/, '')}?text=${encodeURIComponent(`היי ${lead.customer_name}\nבהמשך לשיחה שלנו, מסכם לך בקצרה איך אנחנו עובדים ב-richecom:\n\nהמטרה היא אחת\nלבנות חנות שעובדת ומגיעה למכירות בצורה עקבית.\n\nמה התהליך כולל:\n• בניית חנות Shopify פרימיום\n• מחקר מוצרים ומסרים מדויקים\n• אסטרטגיית טראפיק ראשונית\n• תשתית מדידה מלאה (פיקסל, GA4)\n• אוטומציות בסיסיות למכירה\n• ליווי אישי 1-על-1 לאורך הדרך\n\nההשקעה שלך בתהליך:\n7,500 ₪ + מע״מ\n\nאנחנו עובדים איתך, צעד-צעד,\nולא משחררים לפני שהחנות מתחילה למכור.\n\nאם זה מדויק לך\nתן אישור ונצא לדרך.`)}`} 
-                            target="_blank" 
+                          <a
+                            href={`https://wa.me/972${lead.customer_phone.replace(/\D/g, '').replace(/^0/, '')}?text=${encodeURIComponent(`היי ${lead.customer_name}\nבהמשך לשיחה שלנו, מסכם לך בקצרה איך אנחנו עובדים ב-richecom:\n\nהמטרה היא אחת\nלבנות חנות שעובדת ומגיעה למכירות בצורה עקבית.\n\nמה התהליך כולל:\n• בניית חנות Shopify פרימיום\n• מחקר מוצרים ומסרים מדויקים\n• אסטרטגיית טראפיק ראשונית\n• תשתית מדידה מלאה (פיקסל, GA4)\n• אוטומציות בסיסיות למכירה\n• ליווי אישי 1-על-1 לאורך הדרך\n\nההשקעה שלך בתהליך:\n7,500 ₪ + מע״מ\n\nאנחנו עובדים איתך, צעד-צעד,\nולא משחררים לפני שהחנות מתחילה למכור.\n\nאם זה מדויק לך\nתן אישור ונצא לדרך.`)}`}
+                            target="_blank"
                             rel="noopener noreferrer"
                           >
                             <Button className="w-full bg-green-600 hover:bg-green-700">
@@ -475,21 +498,21 @@ export default function Quotes() {
                         <p className="text-2xl font-bold text-slate-800">₪{quote.grand_total?.toLocaleString() || 0}</p>
                         <p className="text-xs text-slate-500">תוקף עד: {quote.valid_until ? format(new Date(quote.valid_until), "dd/MM/yy") : 'N/A'}</p>
                       </div>
-                      
+
                       <div className="space-y-2 mt-4 pt-4 border-t">
                         <div className="grid grid-cols-2 gap-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleQuoteClosed(quote, "won")} 
+                          <Button
+                            size="sm"
+                            onClick={() => handleQuoteClosed(quote, "won")}
                             className="w-full bg-green-600 hover:bg-green-700 text-white"
                             disabled={quote.status === "אושרה" || quote.status === "בוטלה"}
                           >
                             <CheckCircle className="w-4 h-4 ml-2" />
                             סגר
                           </Button>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleQuoteClosed(quote, "lost")} 
+                          <Button
+                            size="sm"
+                            onClick={() => handleQuoteClosed(quote, "lost")}
                             className="w-full bg-red-600 hover:bg-red-700 text-white"
                             disabled={quote.status === "אושרה" || quote.status === "בוטלה"}
                           >
@@ -497,19 +520,19 @@ export default function Quotes() {
                             לא סגר
                           </Button>
                         </div>
-                        
+
                         <div className="grid grid-cols-3 gap-2">
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleView(quote)} 
+                          <Button
+                            size="sm"
+                            onClick={() => handleView(quote)}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                           >
                             צפה
                           </Button>
                           {quote.customer_phone && (
-                            <a 
-                              href={`https://wa.me/972${quote.customer_phone.replace(/\D/g, '').replace(/^0/, '')}?text=${encodeURIComponent(`היי ${quote.customer_name}\nבהמשך לשיחה שלנו, מסכם לך בקצרה איך אנחנו עובדים ב-richecom:\n\nהמטרה היא אחת\nלבנות חנות שעובדת ומגיעה למכירות בצורה עקבית.\n\nמה התהליך כולל:\n• בניית חנות Shopify פרימיום\n• מחקר מוצרים ומסרים מדויקים\n• אסטרטגיית טראפיק ראשונית\n• תשתית מדידה מלאה (פיקסל, GA4)\n• אוטומציות בסיסיות למכירה\n• ליווי אישי 1-על-1 לאורך הדרך\n\nההשקעה שלך בתהליך:\n₪${quote.grand_total?.toLocaleString() || '0'}\n\nאנחנו עובדים איתך, צעד-צעד,\nולא משחררים לפני שהחנות מתחילה למכור.\n\nאם זה מדויק לך\nתן אישור ונצא לדרך.`)}`} 
-                              target="_blank" 
+                            <a
+                              href={`https://wa.me/972${quote.customer_phone.replace(/\D/g, '').replace(/^0/, '')}?text=${encodeURIComponent(`היי ${quote.customer_name}\nבהמשך לשיחה שלנו, מסכם לך בקצרה איך אנחנו עובדים ב-richecom:\n\nהמטרה היא אחת\nלבנות חנות שעובדת ומגיעה למכירות בצורה עקבית.\n\nמה התהליך כולל:\n• בניית חנות Shopify פרימיום\n• מחקר מוצרים ומסרים מדויקים\n• אסטרטגיית טראפיק ראשונית\n• תשתית מדידה מלאה (פיקסל, GA4)\n• אוטומציות בסיסיות למכירה\n• ליווי אישי 1-על-1 לאורך הדרך\n\nההשקעה שלך בתהליך:\n₪${quote.grand_total?.toLocaleString() || '0'}\n\nאנחנו עובדים איתך, צעד-צעד,\nולא משחררים לפני שהחנות מתחילה למכור.\n\nאם זה מדויק לך\nתן אישור ונצא לדרך.`)}`}
+                              target="_blank"
                               rel="noopener noreferrer"
                             >
                               <Button size="sm" className="w-full bg-green-600 hover:bg-green-700">
@@ -538,32 +561,32 @@ export default function Quotes() {
           </div>
         )}
 
-        {((viewMode === "quotes" && filteredQuotes.length === 0) || 
+        {((viewMode === "quotes" && filteredQuotes.length === 0) ||
           (viewMode === "leads" && filteredLeads.length === 0)) && (
-          <Card className="p-12 text-center">
-            {viewMode === "quotes" ? <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" /> : <TrendingUp className="w-16 h-16 mx-auto text-slate-300 mb-4" />}
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">
-              {viewMode === "quotes" ? "אין הצעות מחיר" : "אין לידים ממתינים"}
-            </h3>
-            <p className="text-slate-500">
-              {viewMode === "quotes" ? "התחל ביצירת הצעת המחיר הראשונה" : "כל הלידים כבר קיבלו הצעת מחיר"}
-            </p>
-          </Card>
-        )}
+            <Card className="p-12 text-center">
+              {viewMode === "quotes" ? <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" /> : <TrendingUp className="w-16 h-16 mx-auto text-slate-300 mb-4" />}
+              <h3 className="text-xl font-semibold text-slate-700 mb-2">
+                {viewMode === "quotes" ? "אין הצעות מחיר" : "אין לידים ממתינים"}
+              </h3>
+              <p className="text-slate-500">
+                {viewMode === "quotes" ? "התחל ביצירת הצעת המחיר הראשונה" : "כל הלידים כבר קיבלו הצעת מחיר"}
+              </p>
+            </Card>
+          )}
 
         <Dialog open={showForm && !editingQuote} onOpenChange={(open) => { if (!open) { setShowForm(false); setSelectedLead(null); } }}>
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>הצעת מחיר חדשה</DialogTitle>
             </DialogHeader>
-            <QuoteForm 
-              quote={null} 
+            <QuoteForm
+              quote={null}
               selectedLead={selectedLead}
-              leads={leads} 
+              leads={leads}
               inventory={inventory}
               onSubmit={createOrUpdateMutation.mutateAsync}
-              onCancel={() => { 
-                setShowForm(false); 
+              onCancel={() => {
+                setShowForm(false);
                 setSelectedLead(null);
               }}
               onQuoteCreated={handleQuoteCreated}
@@ -577,14 +600,14 @@ export default function Quotes() {
             <DialogHeader>
               <DialogTitle>עריכת הצעת מחיר</DialogTitle>
             </DialogHeader>
-            <QuoteForm 
-              quote={editingQuote} 
+            <QuoteForm
+              quote={editingQuote}
               selectedLead={null}
-              leads={leads} 
+              leads={leads}
               inventory={inventory}
               onSubmit={createOrUpdateMutation.mutateAsync}
-              onCancel={() => { 
-                setShowEditDialog(false); 
+              onCancel={() => {
+                setShowEditDialog(false);
                 setEditingQuote(null);
               }}
               onQuoteCreated={handleQuoteCreated}
@@ -626,7 +649,7 @@ export default function Quotes() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {isAddingCustomReason && (
                 <div className="space-y-2">
                   <Label htmlFor="custom-reason">סיבה חדשה *</Label>
@@ -647,6 +670,24 @@ export default function Quotes() {
               </DialogClose>
               <Button onClick={handleCloseQuoteLost} className="bg-blue-600 hover:bg-blue-700 text-white">
                 שמור
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!quoteToDelete} onOpenChange={(open) => !open && setQuoteToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>מחיקת הצעת מחיר</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>האם למחוק את ההצעה של <strong>{quoteToDelete?.customer_name}</strong>?</p>
+              <p className="text-sm text-gray-500 mt-2">פעולה זו אינה הפיכה.</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setQuoteToDelete(null)}>ביטול</Button>
+              <Button variant="destructive" onClick={confirmDelete}>
+                {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "כן, מחק"}
               </Button>
             </DialogFooter>
           </DialogContent>
