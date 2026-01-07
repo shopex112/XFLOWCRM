@@ -1,3 +1,4 @@
+
 import React from "react";
 import { base44, supabase } from "@/api/base44client";
 import Login from "./login.jsx";
@@ -31,51 +32,25 @@ import RenewSubscription from "./renewsubscription.jsx";
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
-    Tasks: Tasks,
-    QuickTasks: QuickTasks,
-    Reports: Reports,
-    Setup: Setup,
-    Leads: Leads,
-    ManageLeadSources: ManageLeadSources,
-    ChatBot: ChatBot,
-    SystemHistory: SystemHistory,
-    CustomersPage: CustomersPage,
-    Jobs: Jobs,
-    Suppliers: Suppliers,
-    Bot: Bot,
-    Settings: Settings,
-    Quotes: Quotes,
-    Employees: Employees,
-    EmployeeDetails: EmployeeDetails,
-    Dashboard: Dashboard,
-    SupplierOrders: SupplierOrders,
-    Customers: Customers,
-    CustomerDetails: CustomerDetails,
-    Invoices: Invoices,
-    EmployeesNew: EmployeesNew,
-    Catalog: Catalog,
-    RenewSubscription: RenewSubscription,
+    Tasks, QuickTasks, Reports, Setup, Leads, ManageLeadSources, ChatBot, SystemHistory,
+    CustomersPage, Jobs, Suppliers, Bot, Settings, Quotes, Employees, EmployeeDetails,
+    Dashboard, SupplierOrders, Customers, CustomerDetails, Invoices, EmployeesNew, Catalog, RenewSubscription,
 }
 
 function _getCurrentPage(url) {
-    if (url.endsWith('/')) {
-        url = url.slice(0, -1);
-    }
+    if (url.endsWith('/')) url = url.slice(0, -1);
     let urlLastPart = url.split('/').pop();
-    if (urlLastPart.includes('?')) {
-        urlLastPart = urlLastPart.split('?')[0];
-    }
-
+    if (urlLastPart.includes('?')) urlLastPart = urlLastPart.split('?')[0];
     const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
     return pageName || Object.keys(PAGES)[0];
 }
 
-function PagesContent() {
+function PagesContent({ user }) {
     const location = useLocation();
     const currentPage = _getCurrentPage(location.pathname);
 
     return (
-        <Layout currentPageName={currentPage}>
+        <Layout currentPageName={currentPage} user={user}>
             <Routes>
                 <Route path="/" element={<Tasks />} />
                 <Route path="/Tasks" element={<Tasks />} />
@@ -110,97 +85,81 @@ function PagesContent() {
 export default function Pages() {
     const [user, setUser] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
-    const [authReady, setAuthReady] = React.useState(false);
 
     React.useEffect(() => {
+        let mounted = true;
+
         const checkUser = async () => {
-            let foundUser = false;
+            console.log("Starting Auth check...");
 
-            // Priority 1: Instant check via localStorage (bypasses SDK hangs)
-            const storageKey = 'xflow-v3-auth';
-            const cachedSession = localStorage.getItem(storageKey);
-
-            if (cachedSession) {
-                try {
-                    const parsed = JSON.parse(cachedSession);
-                    if (parsed?.user) {
-                        console.log("Proactive session found.");
-                        const userMeta = parsed.user.user_metadata || {};
-                        setUser({
-                            id: parsed.user.id,
-                            email: parsed.user.email,
-                            full_name: userMeta.full_name || parsed.user.email.split('@')[0],
-                            role: userMeta.role || 'admin',
-                            ...userMeta
-                        });
-                        foundUser = true;
-                        setLoading(false);
-                        setAuthReady(true);
-                    }
-                } catch (e) {
-                    console.warn("Failed to parse cached session");
-                }
-            }
-
-            // Priority 2: Standard SDK check (with timeout)
-            const timeoutId = setTimeout(() => {
-                if (!foundUser) {
-                    console.warn("Auth check stalled, showing login.");
+            // Timeout safety - don't stay stuck on spinner forever
+            const timeout = setTimeout(() => {
+                if (mounted && loading) {
+                    console.warn("Auth check stalled, forcing loader off.");
                     setLoading(false);
-                    setAuthReady(true);
                 }
-            }, 3000);
+            }, 5000);
 
             try {
+                // 1. Get Session directly immediately
                 const { data: { session }, error } = await supabase.auth.getSession();
-                if (session?.user) {
-                    const userData = await base44.auth.me();
-                    setUser(userData);
-                    foundUser = true;
-                } else if (!foundUser) {
-                    setUser(null);
+
+                if (error) {
+                    console.error("Session error:", error);
+                }
+
+                if (session?.user && mounted) {
+                    console.log("Session found for:", session.user.email);
+                    // 2. Set basic user IMMEDIATELY found in session
+                    const basicUser = {
+                        id: session.user.id,
+                        email: session.user.email,
+                        role_type: 'manager',
+                    };
+                    setUser(basicUser);
+
+                    // 3. Try to enrich with DB data in background
+                    try {
+                        const dbUser = await base44.auth.me();
+                        if (mounted && dbUser) {
+                            console.log("User enriched from DB");
+                            setUser(dbUser);
+                        }
+                    } catch (dbError) {
+                        console.warn("Could not fetch extra user details, staying with basic session user:", dbError);
+                    }
+                } else {
+                    console.log("No proactive session found.");
                 }
             } catch (err) {
-                console.error("Auth check failed:", err);
+                console.error("Critical Auth Error:", err.message);
             } finally {
-                clearTimeout(timeoutId);
-                setLoading(false);
-                setAuthReady(true);
+                clearTimeout(timeout);
+                if (mounted) {
+                    console.log("Auth check complete, setting loading to false");
+                    setLoading(false);
+                }
             }
         };
+
         checkUser();
 
-        const { data: authListener } = base44.supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                const userData = await base44.auth.me();
-                setUser(userData);
+        // Listen for auth changes
+        const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth state change:", event);
+            if (event === 'SIGNED_IN' && session?.user && mounted) {
+                setUser({
+                    id: session.user.id,
+                    email: session.user.email,
+                    role_type: 'manager'
+                });
             } else if (event === 'SIGNED_OUT') {
-                setUser(null);
+                if (mounted) setUser(null);
             }
         });
 
         return () => {
-            if (authListener && authListener.subscription) {
-                authListener.subscription.unsubscribe();
-            }
+            mounted = false;
+            listener?.subscription?.unsubscribe();
         };
-    }, []);
-
-    if (loading || !authReady) {
-        return (
-            <div className="flex justify-center items-center h-screen bg-slate-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-        );
-    }
-
-    if (!user) {
-        return <Login />;
-    }
-
-    return (
-        <Router>
-            <PagesContent />
-        </Router>
-    );
-}
+ 
