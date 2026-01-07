@@ -162,11 +162,11 @@ const PERMISSION_CATEGORIES = {
 // פונקציה לחישוב מדדים
 const calculateUserMetrics = (user, jobs, leads, timeRange) => {
   if (!user) return { totalInstallations: 0, totalRevenue: 0, totalBatteries: 0, uniqueCustomers: 0, avgTime: 0 };
-  
+
   const now = new Date();
   let interval;
-  
-  switch(timeRange) {
+
+  switch (timeRange) {
     case "day":
       interval = { start: startOfDay(now), end: now };
       break;
@@ -183,10 +183,10 @@ const calculateUserMetrics = (user, jobs, leads, timeRange) => {
     default:
       interval = null;
   }
-  
+
   // תיקון: גם אם אין end_time, עדיין נספור את העבודה
   let userJobs = jobs.filter(j => j.installer_email === user.email && j.status === "בוצע");
-  
+
   if (interval) {
     userJobs = userJobs.filter(j => {
       // אם יש end_time - נבדוק לפי זה, אחרת לפי updated_date
@@ -194,22 +194,22 @@ const calculateUserMetrics = (user, jobs, leads, timeRange) => {
       return isWithinInterval(dateToCheck, interval);
     });
   }
-  
+
   const totalInstallations = userJobs.length;
-  
+
   const jobLeadIds = userJobs.map(j => j.lead_id).filter(Boolean);
   const relatedLeads = leads.filter(l => jobLeadIds.includes(l.id));
   const totalRevenue = _.sumBy(relatedLeads, l => l.actual_value || 0);
-  
+
   const totalBatteries = userJobs.reduce((sum, job) => {
     return sum + (job.items?.length || 0);
   }, 0);
-  
+
   const uniqueCustomers = _.uniq(userJobs.map(j => j.customer_name).filter(Boolean)).length;
-  
+
   const jobsWithTime = userJobs.filter(j => j.start_time && j.end_time);
   let avgTime = 0;
-  
+
   if (jobsWithTime.length > 0) {
     const totalMinutes = jobsWithTime.reduce((sum, job) => {
       const start = new Date(job.start_time);
@@ -218,10 +218,10 @@ const calculateUserMetrics = (user, jobs, leads, timeRange) => {
       const diffMins = Math.floor(diffMs / 60000);
       return sum + Math.max(0, diffMins);
     }, 0);
-    
+
     avgTime = Math.round(totalMinutes / jobsWithTime.length);
   }
-  
+
   return {
     totalInstallations,
     totalRevenue,
@@ -249,7 +249,7 @@ const SimplePermissionsEditor = ({ user, onSave, onCancel, onAdvanced }) => {
     setSelectedProfile(profile);
     const profileConfig = PERMISSION_PROFILES[profile];
     const newCats = {};
-    
+
     if (profileConfig.all) {
       Object.keys(SIMPLE_CATEGORIES).forEach(cat => {
         newCats[cat] = true;
@@ -267,7 +267,7 @@ const SimplePermissionsEditor = ({ user, onSave, onCancel, onAdvanced }) => {
         newCats[cat] = enabledCount === permsInCat.length;
       });
     }
-    
+
     setCategoryPermissions(newCats);
   };
 
@@ -278,13 +278,13 @@ const SimplePermissionsEditor = ({ user, onSave, onCancel, onAdvanced }) => {
         fullPermissions[perm] = categoryPermissions[cat] || false;
       });
     });
-    
-    onSave({ 
-      id: user.id, 
-      data: { 
+
+    onSave({
+      id: user.id,
+      data: {
         permissions: fullPermissions,
-        role_type: selectedProfile !== "custom" ? selectedProfile : user.role_type 
-      } 
+        role_type: selectedProfile !== "custom" ? selectedProfile : user.role_type
+      }
     });
   };
 
@@ -301,7 +301,7 @@ const SimplePermissionsEditor = ({ user, onSave, onCancel, onAdvanced }) => {
           </div>
           <Button variant="ghost" size="icon" onClick={onCancel}><X className="w-4 h-4" /></Button>
         </CardHeader>
-        
+
         <CardContent className="p-6 space-y-6">
           <div className="space-y-2">
             <Label className="text-sm font-semibold">📋 בחר פרופיל מהיר:</Label>
@@ -331,14 +331,14 @@ const SimplePermissionsEditor = ({ user, onSave, onCancel, onAdvanced }) => {
               {Object.keys(SIMPLE_CATEGORIES).map(category => (
                 <div key={category} className="flex items-center justify-between p-3 bg-white border rounded-lg hover:bg-slate-50 transition-colors">
                   <Label htmlFor={category} className="text-sm font-medium cursor-pointer">
-                    {category === "לידים" && "📊"} 
-                    {category === "כספים" && "💰"} 
-                    {category === "מלאי" && "📦"} 
-                    {category === "עבודות" && "🔧"} 
-                    {category === "לקוחות" && "👥"} 
-                    {category === "עובדים" && "👨‍💼"} 
-                    {category === "דוחות" && "📈"} 
-                    {category === "הגדרות" && "⚙️"} 
+                    {category === "לידים" && "📊"}
+                    {category === "כספים" && "💰"}
+                    {category === "מלאי" && "📦"}
+                    {category === "עבודות" && "🔧"}
+                    {category === "לקוחות" && "👥"}
+                    {category === "עובדים" && "👨‍💼"}
+                    {category === "דוחות" && "📈"}
+                    {category === "הגדרות" && "⚙️"}
                     {" "}{category}
                   </Label>
                   <div className="flex items-center gap-3">
@@ -349,7 +349,7 @@ const SimplePermissionsEditor = ({ user, onSave, onCancel, onAdvanced }) => {
                       id={category}
                       checked={categoryPermissions[category] || false}
                       onCheckedChange={(checked) => {
-                        setCategoryPermissions({...categoryPermissions, [category]: checked});
+                        setCategoryPermissions({ ...categoryPermissions, [category]: checked });
                         setSelectedProfile("custom");
                       }}
                     />
@@ -360,8 +360,8 @@ const SimplePermissionsEditor = ({ user, onSave, onCancel, onAdvanced }) => {
           </div>
 
           <div className="flex flex-col gap-3 pt-4 border-t">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={onAdvanced}
               className="w-full"
             >
@@ -412,7 +412,7 @@ const AdvancedPermissionsEditor = ({ user, onSave, onCancel }) => {
           </div>
           <Button variant="ghost" size="icon" onClick={onCancel}><X className="w-4 h-4" /></Button>
         </CardHeader>
-        
+
         <CardContent className="p-6 space-y-6">
           <Tabs defaultValue="לידים ומכירות" className="w-full">
             <TabsList className="grid w-full grid-cols-4 h-auto">
@@ -477,13 +477,13 @@ const QuickEditCard = ({ user, onSave, onCancel }) => {
   const [phone, setPhone] = useState(user.phone || "");
 
   const handleSave = () => {
-    onSave({ 
-      id: user.id, 
-      data: { 
+    onSave({
+      id: user.id,
+      data: {
         role_type: roleType,
         availability_status: availabilityStatus,
         phone: phone
-      } 
+      }
     });
   };
 
@@ -539,7 +539,7 @@ const QuickEditCard = ({ user, onSave, onCancel }) => {
 
 const UserMetricsDialog = ({ user, metrics, timeRange, onTimeRangeChange, onClose }) => {
   if (!user || !metrics) return null;
-  
+
   return (
     <Dialog open={!!user} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -549,46 +549,46 @@ const UserMetricsDialog = ({ user, metrics, timeRange, onTimeRangeChange, onClos
             מדדי ביצועים - {user.full_name}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6 py-4">
           <div className="flex gap-2 flex-wrap">
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={timeRange === "day" ? "default" : "outline"}
               onClick={() => onTimeRangeChange("day")}
             >
               היום
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={timeRange === "week" ? "default" : "outline"}
               onClick={() => onTimeRangeChange("week")}
             >
               שבוע
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={timeRange === "month" ? "default" : "outline"}
               onClick={() => onTimeRangeChange("month")}
             >
               חודש
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={timeRange === "quarter" ? "default" : "outline"}
               onClick={() => onTimeRangeChange("quarter")}
             >
               רבעון
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={timeRange === "all" ? "default" : "outline"}
               onClick={() => onTimeRangeChange("all")}
             >
               כל הזמן
             </Button>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <Card className="border-none shadow-md bg-gradient-to-br from-blue-50 to-blue-100">
               <CardContent className="p-4">
@@ -601,7 +601,7 @@ const UserMetricsDialog = ({ user, metrics, timeRange, onTimeRangeChange, onClos
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border-none shadow-md bg-gradient-to-br from-green-50 to-green-100">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -613,7 +613,7 @@ const UserMetricsDialog = ({ user, metrics, timeRange, onTimeRangeChange, onClos
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border-none shadow-md bg-gradient-to-br from-purple-50 to-purple-100">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -625,7 +625,7 @@ const UserMetricsDialog = ({ user, metrics, timeRange, onTimeRangeChange, onClos
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border-none shadow-md bg-gradient-to-br from-orange-50 to-orange-100">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -637,7 +637,7 @@ const UserMetricsDialog = ({ user, metrics, timeRange, onTimeRangeChange, onClos
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="border-none shadow-md bg-gradient-to-br from-pink-50 to-pink-100">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -659,6 +659,14 @@ const UserMetricsDialog = ({ user, metrics, timeRange, onTimeRangeChange, onClos
 export default function Employees() {
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      deleteMutation.mutate(userToDelete.id);
+      setUserToDelete(null);
+    }
+  };
   const [quickEditingUser, setQuickEditingUser] = useState(null);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [viewingUserMetrics, setViewingUserMetrics] = useState(null);
@@ -698,15 +706,15 @@ export default function Employees() {
       setEditingUser(null);
       setQuickEditingUser(null);
       setAdvancedMode(false);
-      
+
       if (updatedUser.availability_status === "פנוי" && updatedUser.role_type === "איש צוות") {
         const waitingLeads = leads
           .filter(l => l.status === "ממתין לטיפול" && !l.assignee_id)
           .sort((a, b) => new Date(a.created_date) - new Date(b.created_date));
-        
+
         if (waitingLeads.length > 0) {
           const nextLead = waitingLeads[0];
-          
+
           try {
             const newJob = await base44.entities.Job.create({
               lead_id: nextLead.id,
@@ -720,23 +728,23 @@ export default function Employees() {
               start_time: new Date().toISOString(),
               notes: nextLead.notes || ""
             });
-            
+
             await base44.entities.Lead.update(nextLead.id, {
               assignee_id: updatedUser.id,
               job_id: newJob.id,
               internal_p_paid_assigned: true
             });
-            
+
             await base44.entities.User.update(updatedUser.id, {
               availability_status: "בעבודה"
             });
-            
+
             queryClient.invalidateQueries({ queryKey: ['leads'] });
             queryClient.invalidateQueries({ queryKey: ['jobs'] });
             queryClient.invalidateQueries({ queryKey: ['users'] });
-            
-            toast({ 
-              title: "✓ עבודה חדשה נמשכה מהתור!", 
+
+            toast({
+              title: "✓ עבודה חדשה נמשכה מהתור!",
               description: `${updatedUser.full_name} שובץ ללקוח: ${nextLead.customer_name}`,
               duration: 6000
             });
@@ -761,6 +769,9 @@ export default function Employees() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({ title: "✓ העובד נמחק" });
     },
+    onError: (error) => {
+      toast({ title: "שגיאה במחיקת עובד", description: error.message, variant: "destructive" });
+    },
   });
 
   const isAdmin = currentUser?.role === "admin";
@@ -770,10 +781,7 @@ export default function Employees() {
       toast({ title: "אין הרשאה", variant: "destructive" });
       return;
     }
-    
-    if (confirm(`האם למחוק את ${user.full_name}?`)) {
-      deleteMutation.mutate(user.id);
-    }
+    setUserToDelete(user);
   };
 
   const handleVacationToggle = (user) => {
@@ -789,14 +797,24 @@ export default function Employees() {
     setMetricsTimeRange("month");
   };
 
-  // תיקון: אם זה לא אדמין ואין נתונים ב-users - נציג את המשתמש הנוכחי
-  let displayedUsers = isAdmin ? users : users.filter(u => u.email === currentUser?.email);
-  
-  // אם זה לא אדמין והרשימה ריקה - נוסיף את המשתמש הנוכחי ידנית
-  if (!isAdmin && displayedUsers.length === 0 && currentUser) {
+  // FIX: Ensure current user is always displayed if list is empty or they are missing
+  let displayedUsers = [];
+
+  if (users.length === 0 && currentUser) {
     displayedUsers = [currentUser];
+  } else if (isAdmin) {
+    displayedUsers = [...users];
+    // Check if current admin is in the list, if not add them
+    if (!users.find(u => u.email === currentUser?.email) && currentUser) {
+      displayedUsers.unshift(currentUser);
+    }
+  } else {
+    displayedUsers = users.filter(u => u.email === currentUser?.email);
+    if (displayedUsers.length === 0 && currentUser) {
+      displayedUsers = [currentUser];
+    }
   }
-  
+
   const usersWithMetrics = useMemo(() => {
     return displayedUsers.map(user => {
       const metrics = calculateUserMetrics(user, jobs, leads, metricsTimeRange);
@@ -812,8 +830,8 @@ export default function Employees() {
       };
     });
   }, [displayedUsers, jobs, leads, metricsTimeRange]);
-  
-  const viewingUserMetricsData = viewingUserMetrics ? 
+
+  const viewingUserMetricsData = viewingUserMetrics ?
     calculateUserMetrics(viewingUserMetrics, jobs, leads, metricsTimeRange) : null;
 
   return (
@@ -839,36 +857,36 @@ export default function Employees() {
 
         {!isAdmin && (
           <div className="mb-6 flex gap-2 flex-wrap">
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={metricsTimeRange === "day" ? "default" : "outline"}
               onClick={() => setMetricsTimeRange("day")}
             >
               היום
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={metricsTimeRange === "week" ? "default" : "outline"}
               onClick={() => setMetricsTimeRange("week")}
             >
               שבוע
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={metricsTimeRange === "month" ? "default" : "outline"}
               onClick={() => setMetricsTimeRange("month")}
             >
               חודש
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={metricsTimeRange === "quarter" ? "default" : "outline"}
               onClick={() => setMetricsTimeRange("quarter")}
             >
               רבעון
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant={metricsTimeRange === "all" ? "default" : "outline"}
               onClick={() => setMetricsTimeRange("all")}
             >
@@ -907,15 +925,15 @@ export default function Employees() {
                 <QuickEditCard key={user.id} user={quickEditingUser} onSave={updateMutation.mutate} onCancel={() => setQuickEditingUser(null)} />
               ) : editingUser?.id === user.id ? (
                 advancedMode ? (
-                  <AdvancedPermissionsEditor 
-                    key={user.id} 
+                  <AdvancedPermissionsEditor
+                    key={user.id}
                     user={editingUser}
                     onSave={updateMutation.mutate}
-                    onCancel={() => { setEditingUser(null); setAdvancedMode(false); }} 
+                    onCancel={() => { setEditingUser(null); setAdvancedMode(false); }}
                   />
                 ) : (
-                  <SimplePermissionsEditor 
-                    key={user.id} 
+                  <SimplePermissionsEditor
+                    key={user.id}
                     user={editingUser}
                     onSave={updateMutation.mutate}
                     onCancel={() => setEditingUser(null)}
@@ -983,7 +1001,7 @@ export default function Employees() {
                         </div>
                       )}
                     </CardContent>
-                    
+
                     {isAdmin && (
                       <CardContent className="p-4 border-t mt-auto">
                         <div className="grid grid-cols-4 gap-2">
@@ -1011,9 +1029,9 @@ export default function Employees() {
           </div>
         )}
       </div>
-      
+
       {viewingUserMetrics && (
-        <UserMetricsDialog 
+        <UserMetricsDialog
           user={viewingUserMetrics}
           metrics={viewingUserMetricsData}
           timeRange={metricsTimeRange}
@@ -1021,6 +1039,24 @@ export default function Employees() {
           onClose={() => setViewingUserMetrics(null)}
         />
       )}
+
+      <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>מחיקת עובד</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>האם אתה בטוח שברצונך למחוק את <strong>{userToDelete?.full_name}</strong>?</p>
+            <p className="text-sm text-gray-500 mt-2">פעולה זו תסיר את העובד מהמערכת.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUserToDelete(null)}>ביטול</Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "כן, מחק"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
