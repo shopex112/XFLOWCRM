@@ -90,7 +90,10 @@ export default function Dashboard() {
     acc[method] = (acc[method] || 0) + 1;
     return acc;
   }, {});
-
+  const { data: leads = [] } = useQuery({
+  queryKey: ['leads'],
+  queryFn: () => base44.entities.Lead.list('-created_date'),
+});
   // שיעור המרה
   const conversionRate = filteredLeads.length > 0 
     ? ((funnelStats.closed / filteredLeads.length) * 100).toFixed(1) 
