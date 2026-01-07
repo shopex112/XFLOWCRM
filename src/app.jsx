@@ -1,6 +1,6 @@
 import React from 'react'
-import Protected from './components/Protected'
-import Dashboard from './pages/Dashboard'
+import Protected from './components/protected'
+import Dashboard from './pages/dashboard'
 
 export default function App() {
   return (
