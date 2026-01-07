@@ -5,6 +5,15 @@ export default {
 	darkMode: ["class"],
 	content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
 	theme: {
+		screens: {
+			'xs': '375px',    // Small phones
+			'sm': '640px',    // Large phones / small tablets
+			'md': '768px',    // Tablets
+			'lg': '1024px',   // Small laptops
+			'xl': '1280px',   // Desktops
+			'2xl': '1536px',  // Large desktops
+			'3xl': '1920px',  // Ultra-wide
+		},
 		extend: {
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -63,6 +72,12 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			spacing: {
+				'safe-top': 'env(safe-area-inset-top)',
+				'safe-bottom': 'env(safe-area-inset-bottom)',
+				'safe-left': 'env(safe-area-inset-left)',
+				'safe-right': 'env(safe-area-inset-right)',
+			},
 			keyframes: {
 				'accordion-down': {
 					from: {
@@ -73,19 +88,4 @@ export default {
 					}
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
-				}
-			},
-			animation: {
-				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
-		}
-	},
-	plugins: [tailwindcssAnimate],
-}
+	
