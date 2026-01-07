@@ -629,34 +629,35 @@ export default function Leads() {
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6 mb-6 md:mb-8">
           {filteredLeads.map((lead, index) => (
             <motion.div
               key={lead.id}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.2, delay: index * 0.05 }}
+              className="min-w-0"
             >
-              <Card className="hover:shadow-xl transition-all border-none bg-white relative overflow-hidden group">
+              <Card className="hover:shadow-xl transition-all border-none bg-white relative overflow-hidden group h-full flex flex-col">
                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${statusColors[lead.status]?.split(' ')[0] || 'bg-slate-200'}`} />
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
+                <CardContent className="p-4 sm:p-5 md:p-6 flex-1 flex flex-col min-w-0">
+                  <div className="flex justify-between items-start mb-3 md:mb-4 gap-2">
+                    <div className="flex-1 min-w-0">
                       {lead.serial_number && (
                         <span className="text-[10px] font-mono text-slate-400 block mb-1">
                           #{lead.serial_number}
                         </span>
                       )}
-                      <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        {lead.customer_name}
+                      <h3 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2 truncate">
+                        <span className="truncate">{lead.customer_name}</span>
                         {lead.lead_rating && (
-                          <span className="text-lg" title={lead.lead_rating}>
+                          <span className="text-base sm:text-lg flex-shrink-0" title={lead.lead_rating}>
                             {ratingIcons[lead.lead_rating]}
                           </span>
                         )}
                       </h3>
                       {lead.company_name && (
-                        <p className="text-sm text-slate-500 font-medium">{lead.company_name}</p>
+                        <p className="text-sm text-slate-500 font-medium truncate">{lead.company_name}</p>
                       )}
                     </div>
                     <Badge className={`${statusColors[lead.status]} border-none px-3 py-1 text-xs font-bold whitespace-nowrap`}>
