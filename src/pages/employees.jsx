@@ -849,13 +849,7 @@ export default function Employees() {
               {isAdmin ? `רשימת כל העובדים במערכת (${users.length})` : "פרטים אישיים ומדדי ביצועים"}
             </p>
           </div>
-          {/* isAdmin && (
-            <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-5 h-5 ml-2" />
-              הוסף עובד
-            </Button>
-          ) */
-          /* TODO: Re-implement Add Employee functionality */}
+          {/* TODO: Re-implement Add Employee functionality */}
         </motion.div>
 
         {!isAdmin && (
@@ -1060,3 +1054,6 @@ export default function Employees() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
