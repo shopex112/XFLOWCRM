@@ -61,6 +61,11 @@ const cleanLeadPayload = (data) => {
     }
   });
 
+  // Handle UUID fields: convert empty strings to null
+  if (safeData.quote_id === "") {
+    safeData.quote_id = null;
+  }
+
   return safeData;
 };
 
@@ -137,34 +142,16 @@ export default function Leads() {
     initialData: []
   });
 
-  const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list(),
-    initialData: []
-  });
 
   const createMutation = useMutation({
     mutationFn: async (taskData) => {
-      const allLeads = await base44.entities.Lead.list();
-      const maxSerial = allLeads.reduce((max, lead) => {
-        if (lead.serial_number && lead.serial_number.startsWith('1')) {
-          const num = parseInt(lead.serial_number.substring(1), 10);
-          if (!isNaN(num)) {
-            return num > max ? num : max;
-          }
-        }
-        return max;
-      }, 0);
-
-      // Serial number logic REMOVED because DB column is missing.
-      // const newSerial = ...
-
-      const cleanData = { ...taskData }; // No serial number added
+      const cleanData = { ...taskData };
 
       if (cleanData.customer_phone && cleanData.customer_phone.startsWith('0')) {
         cleanData.customer_phone = cleanData.customer_phone.substring(1);
       }
 
+      const allLeads = await base44.entities.Lead.list();
       const existingLead = allLeads.find(l => l.customer_phone === cleanData.customer_phone);
       const now = new Date().toISOString();
 
@@ -177,7 +164,6 @@ export default function Leads() {
       }
 
       const payload = cleanLeadPayload(cleanData);
-
 
       return base44.entities.Lead.create(payload);
     },
